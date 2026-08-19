@@ -290,7 +290,52 @@ class ConversationalAssistant {
     // Stop any currently playing audio
     this.stopAllSpeech();
 
-    // Split text into natural sentence chunks (max 120 chars each) for Speechmatics
+    // Fallback: Web Speech Synthesis (natural browser voice)
+    const fallbackWebSpeech = () => {
+      if (!('speechSynthesis' in window)) {
+        this._isSpeakingQueue = false;
+        if (this.avatar3D) this.avatar3D.stopSpeaking();
+        audioVis.setSpeaking(false);
+        return;
+      }
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.rate = 1.04;
+        utterance.pitch = 1.05;
+
+        // Select the most natural female/English voice available
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v => 
+          (v.name.includes('Samantha') || v.name.includes('Victoria') || v.name.includes('Karen') || v.name.includes('Google US English') || v.name.includes('Zira') || v.name.includes('Female')) && v.lang.startsWith('en')
+        ) || voices.find(v => v.lang.startsWith('en'));
+        if (preferredVoice) utterance.voice = preferredVoice;
+
+        utterance.onstart = () => {
+          if (this.avatar3D) this.avatar3D.startSpeaking();
+          audioVis.setSpeaking(true);
+        };
+        utterance.onend = () => {
+          this._isSpeakingQueue = false;
+          if (this.avatar3D) this.avatar3D.stopSpeaking();
+          audioVis.setSpeaking(false);
+        };
+        utterance.onerror = () => {
+          this._isSpeakingQueue = false;
+          if (this.avatar3D) this.avatar3D.stopSpeaking();
+          audioVis.setSpeaking(false);
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.warn('SpeechSynthesis error:', err);
+        this._isSpeakingQueue = false;
+        if (this.avatar3D) this.avatar3D.stopSpeaking();
+        audioVis.setSpeaking(false);
+      }
+    };
+
+    // Split text into natural sentence chunks
     const rawChunks = cleanText.match(/[^.!?]+[.!?]+|\S+/g) || [cleanText];
     const sentenceChunks = [];
     let currentChunk = "";
@@ -344,27 +389,21 @@ class ConversationalAssistant {
           playNextChunk();
         };
 
-        audio.onerror = (err) => {
-          console.warn('Speechmatics audio playback error:', err);
+        audio.onerror = () => {
           this._isSpeakingQueue = false;
-          if (this.avatar3D) this.avatar3D.stopSpeaking();
-          audioVis.setSpeaking(false);
+          fallbackWebSpeech();
         };
 
         const playPromise = audio.play();
         if (playPromise !== undefined) {
-          playPromise.catch((err) => {
-            console.warn('Speechmatics audio play error:', err);
+          playPromise.catch(() => {
             this._isSpeakingQueue = false;
-            if (this.avatar3D) this.avatar3D.stopSpeaking();
-            audioVis.setSpeaking(false);
+            fallbackWebSpeech();
           });
         }
       } catch (e) {
-        console.warn('Speechmatics audio init error:', e);
         this._isSpeakingQueue = false;
-        if (this.avatar3D) this.avatar3D.stopSpeaking();
-        audioVis.setSpeaking(false);
+        fallbackWebSpeech();
       }
     };
 
@@ -372,16 +411,7 @@ class ConversationalAssistant {
   }
 
   stopAudio() {
-    if (this._currentAudio) {
-      try {
-        this._currentAudio.pause();
-        this._currentAudio.currentTime = 0;
-      } catch (e) {}
-      this._currentAudio = null;
-    }
-    this._isSpeakingQueue = false;
-    if (this.avatar3D) this.avatar3D.stopSpeaking();
-    if (window.audioVis) window.audioVis.setSpeaking(false);
+    this.stopAllSpeech();
   }
 
   resetAssistant() {
@@ -399,6 +429,11 @@ class ConversationalAssistant {
       } catch (e) {}
       this._currentAudio = null;
     }
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
+    }
     if (this.avatar3D) this.avatar3D.stopSpeaking();
     audioVis.setSpeaking(false);
   }
@@ -410,6 +445,7 @@ class ConversationalAssistant {
     this.micAudioContext = null;
     this.micAnalyser = null;
     this.micStream = null;
+    this.micAnimFrame = null;
 
     const hud = document.getElementById('liveVoiceHud');
     const hudStatus = document.getElementById('liveVoiceStatusText');
@@ -433,6 +469,58 @@ class ConversationalAssistant {
       }
     };
 
+    // Real-time audio VU meter connected to microphone input
+    const startMicAnalyser = (stream) => {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        if (this.micAudioContext) {
+          try { this.micAudioContext.close(); } catch (e) {}
+        }
+        this.micAudioContext = new AudioContextClass();
+        const source = this.micAudioContext.createMediaStreamSource(stream);
+        this.micAnalyser = this.micAudioContext.createAnalyser();
+        this.micAnalyser.fftSize = 64;
+        this.micAnalyser.smoothingTimeConstant = 0.5;
+        source.connect(this.micAnalyser);
+
+        const vuBars = document.querySelectorAll('.live-voice-bars span');
+        const dataArray = new Uint8Array(this.micAnalyser.frequencyBinCount);
+
+        const renderVu = () => {
+          if (!this.isListening || !this.micAnalyser) return;
+          this.micAnalyser.getByteFrequencyData(dataArray);
+          if (vuBars && vuBars.length > 0) {
+            vuBars.forEach((bar, idx) => {
+              const val = dataArray[idx % dataArray.length] || 0;
+              const h = Math.min(22, Math.max(4, (val / 255) * 24));
+              bar.style.height = `${h}px`;
+            });
+          }
+          this.micAnimFrame = requestAnimationFrame(renderVu);
+        };
+        renderVu();
+      } catch (err) {
+        console.warn('Microphone VU visualizer error:', err);
+      }
+    };
+
+    const stopMicAnalyser = () => {
+      if (this.micAnimFrame) {
+        cancelAnimationFrame(this.micAnimFrame);
+        this.micAnimFrame = null;
+      }
+      if (this.micAudioContext) {
+        try { this.micAudioContext.close(); } catch (e) {}
+        this.micAudioContext = null;
+      }
+      this.micAnalyser = null;
+      const vuBars = document.querySelectorAll('.live-voice-bars span');
+      if (vuBars) {
+        vuBars.forEach(b => b.style.height = '');
+      }
+    };
+
     const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     const setupRecognition = (isContinuous = false) => {
@@ -450,9 +538,9 @@ class ConversationalAssistant {
             this.micBtn.title = 'Live Voice Mode: Active (Click to stop)';
           }
           if (this.queryInput) {
-            this.queryInput.placeholder = '🎙️ Listening... Speak your question now';
+            this.queryInput.placeholder = '🎙️ Listening... Speak naturally';
           }
-          updateHud('listening', '🎙️ Listening... Speak your question now');
+          updateHud('listening', '🎙️ Listening... Speak naturally');
           audioVis.playChime();
         };
 
@@ -468,37 +556,41 @@ class ConversationalAssistant {
             }
           }
 
-          const displayTranscript = (finalTranscript || interimTranscript).trim();
-          if (displayTranscript && this.queryInput) {
-            this.queryInput.value = displayTranscript;
+          const currentText = (finalTranscript || interimTranscript).trim();
+          if (currentText && this.queryInput) {
+            this.queryInput.value = currentText;
           }
 
-          if (finalTranscript.trim()) {
-            updateHud('thinking', '🧠 K.R.I.S.H. Thinking & Synthesizing...');
-            if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
+          // Natural silence debounce (1100ms pause indicates end of question)
+          if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
+          if (currentText.length > 2) {
             this.speechSilenceTimer = setTimeout(() => {
-              const query = finalTranscript.trim();
-              if (query.length > 1) {
+              const fullQuery = (this.queryInput ? this.queryInput.value : currentText).trim();
+              if (fullQuery.length > 1) {
+                updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
                 try { sr.stop(); } catch (e) {}
-                this.handleUserQuestion(query);
+                stopMicAnalyser();
+                this.handleUserQuestion(fullQuery);
               }
-            }, 500);
+            }, 1100);
           }
         };
 
         sr.onerror = (e) => {
           console.warn('Speech recognition error:', e.error);
+          if (e.error === 'no-speech' || e.error === 'aborted') {
+            return;
+          }
           this.isListening = false;
+          stopMicAnalyser();
           if (this.micBtn) this.micBtn.classList.remove('recording');
           if (this.queryInput) {
             this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
           }
 
           if (e.error === 'not-allowed') {
-            updateHud('error', '⚠️ Microphone blocked. Click URL lock icon to allow.');
+            updateHud('error', '⚠️ Microphone access blocked. Please allow mic in browser URL bar.');
             window.showToast?.('⚠️ Microphone access blocked. Please allow microphone in browser URL bar.');
-          } else if (e.error === 'no-speech') {
-            updateHud('hidden');
           } else if (e.error === 'network' || e.error === 'service-not-allowed') {
             updateHud('error', '🎙️ Live Voice unavailable. Tap any suggested prompt below!');
           }
@@ -506,11 +598,20 @@ class ConversationalAssistant {
 
         sr.onend = () => {
           this.isListening = false;
-          if (!this.isLiveVoiceMode) {
-            if (this.micBtn) this.micBtn.classList.remove('recording');
-            if (this.queryInput) {
-              this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
+          stopMicAnalyser();
+          if (this.micBtn) this.micBtn.classList.remove('recording');
+          if (this.queryInput) {
+            this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
+            // Auto-submit on speech end if question was spoken
+            const pendingQuery = this.queryInput.value.trim();
+            if (pendingQuery.length > 2 && this.isLiveVoiceMode) {
+              this.isLiveVoiceMode = false;
+              updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
+              this.handleUserQuestion(pendingQuery);
+              return;
             }
+          }
+          if (!this.isLiveVoiceMode) {
             updateHud('hidden');
           }
         };
@@ -532,8 +633,10 @@ class ConversationalAssistant {
         }
 
         if (this.isListening || this.isLiveVoiceMode || this.isLiveKitConnected) {
+          // Toggle off
           this.isLiveVoiceMode = false;
           this.isListening = false;
+          if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
           if (this.micBtn) this.micBtn.classList.remove('recording');
           if (this.isLiveKitConnected && this.livekitRoom) {
             try {
@@ -544,6 +647,7 @@ class ConversationalAssistant {
           if (this.speechRecognition) {
             try { this.speechRecognition.stop(); } catch (e) {}
           }
+          stopMicAnalyser();
           if (this.micStream) {
             try {
               this.micStream.getTracks().forEach(t => t.stop());
@@ -553,6 +657,8 @@ class ConversationalAssistant {
           updateHud('hidden');
           window.showToast?.('⏹️ Live Voice Mode Stopped');
         } else {
+          // Toggle on: Stop any playing audio to prevent acoustic feedback
+          this.stopAllSpeech();
           this.isLiveVoiceMode = true;
           if (this.micBtn) this.micBtn.classList.add('recording');
           updateHud('listening', '🎙️ Requesting microphone access...');
@@ -561,12 +667,13 @@ class ConversationalAssistant {
           try {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
               this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              startMicAnalyser(this.micStream);
             }
           } catch (permErr) {
             console.warn('Microphone permission blocked:', permErr);
             this.isLiveVoiceMode = false;
             if (this.micBtn) this.micBtn.classList.remove('recording');
-            updateHud('error', '⚠️ Microphone blocked. Click browser lock icon to allow.');
+            updateHud('error', '⚠️ Microphone blocked. Click URL lock icon to allow.');
             window.showToast?.('⚠️ Microphone access blocked. Please allow microphone permission in browser URL bar.');
             return;
           }
