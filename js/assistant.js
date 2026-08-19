@@ -434,98 +434,95 @@ class ConversationalAssistant {
     };
 
     const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognitionClass) {
-      if (this.micBtn) {
-        this.micBtn.title = 'Speech recognition not supported in this browser';
-        this.micBtn.addEventListener('click', () => {
-          window.showToast?.('🎙 Live voice recognition works best in Chrome, Safari, and Edge');
-        });
-      }
-      return;
-    }
 
-    try {
-      this.speechRecognition = new SpeechRecognitionClass();
-      this.speechRecognition.continuous = true;
-      this.speechRecognition.interimResults = true;
-      this.speechRecognition.lang = 'en-US';
+    const setupRecognition = (isContinuous = false) => {
+      if (!SpeechRecognitionClass) return null;
+      try {
+        const sr = new SpeechRecognitionClass();
+        sr.continuous = isContinuous;
+        sr.interimResults = true;
+        sr.lang = 'en-US';
 
-      this.speechRecognition.onstart = () => {
-        this.isListening = true;
-        if (this.micBtn) {
-          this.micBtn.classList.add('recording');
-          this.micBtn.title = 'Live Voice Mode: Active (Click to stop)';
-        }
-        if (this.queryInput) {
-          this.queryInput.placeholder = '🎙️ Listening in real-time... Speak your question';
-        }
-        updateHud('listening', '🎙️ Live Voice: Listening... Speak naturally');
-        audioVis.playChime();
-      };
-
-      this.speechRecognition.onresult = (event) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
+        sr.onstart = () => {
+          this.isListening = true;
+          if (this.micBtn) {
+            this.micBtn.classList.add('recording');
+            this.micBtn.title = 'Live Voice Mode: Active (Click to stop)';
           }
-        }
+          if (this.queryInput) {
+            this.queryInput.placeholder = '🎙️ Listening... Speak your question now';
+          }
+          updateHud('listening', '🎙️ Listening... Speak your question now');
+          audioVis.playChime();
+        };
 
-        const displayTranscript = (finalTranscript || interimTranscript).trim();
-        if (displayTranscript && this.queryInput) {
-          this.queryInput.value = displayTranscript;
-        }
+        sr.onresult = (event) => {
+          let interimTranscript = '';
+          let finalTranscript = '';
 
-        // Auto-commit question when user pauses speaking
-        if (finalTranscript.trim()) {
-          updateHud('thinking', '🧠 K.R.I.S.H. Thinking & Synthesizing...');
-          if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
-          this.speechSilenceTimer = setTimeout(() => {
-            const query = finalTranscript.trim();
-            if (query.length > 1) {
-              if (this.speechRecognition) {
-                try { this.speechRecognition.stop(); } catch (e) {}
-              }
-              this.handleUserQuestion(query);
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            } else {
+              interimTranscript += event.results[i][0].transcript;
             }
-          }, 600);
-        }
-      };
+          }
 
-      this.speechRecognition.onerror = (e) => {
-        console.warn('Speech recognition error:', e.error);
-        this.isListening = false;
-        if (this.micBtn) this.micBtn.classList.remove('recording');
-        if (this.queryInput) {
-          this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
-        }
+          const displayTranscript = (finalTranscript || interimTranscript).trim();
+          if (displayTranscript && this.queryInput) {
+            this.queryInput.value = displayTranscript;
+          }
 
-        if (e.error === 'not-allowed') {
-          updateHud('error', '⚠️ Mic permission blocked. Click URL lock to allow.');
-          window.showToast?.('⚠️ Microphone access blocked. Please allow microphone access in browser.');
-        } else if (e.error === 'network' || e.error === 'audio-capture' || e.error === 'service-not-allowed') {
-          updateHud('error', '🎙️ Brave privacy disables cloud STT. Tap prompts or test in Chrome/Safari!');
-          window.showToast?.('💡 Brave disables Google Speech-to-Text for privacy. Open in Chrome or Safari for live voice, or tap prompts below!');
-        }
-      };
+          if (finalTranscript.trim()) {
+            updateHud('thinking', '🧠 K.R.I.S.H. Thinking & Synthesizing...');
+            if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
+            this.speechSilenceTimer = setTimeout(() => {
+              const query = finalTranscript.trim();
+              if (query.length > 1) {
+                try { sr.stop(); } catch (e) {}
+                this.handleUserQuestion(query);
+              }
+            }, 500);
+          }
+        };
 
-      this.speechRecognition.onend = () => {
-        this.isListening = false;
-        if (!this.isLiveVoiceMode) {
+        sr.onerror = (e) => {
+          console.warn('Speech recognition error:', e.error);
+          this.isListening = false;
           if (this.micBtn) this.micBtn.classList.remove('recording');
           if (this.queryInput) {
             this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
           }
-          updateHud('hidden');
-        }
-      };
-    } catch (err) {
-      console.warn('Speech recognition initialization error:', err);
-    }
+
+          if (e.error === 'not-allowed') {
+            updateHud('error', '⚠️ Microphone blocked. Click URL lock icon to allow.');
+            window.showToast?.('⚠️ Microphone access blocked. Please allow microphone in browser URL bar.');
+          } else if (e.error === 'no-speech') {
+            updateHud('hidden');
+          } else if (e.error === 'network' || e.error === 'service-not-allowed') {
+            updateHud('error', '🎙️ Live Voice unavailable. Tap any suggested prompt below!');
+          }
+        };
+
+        sr.onend = () => {
+          this.isListening = false;
+          if (!this.isLiveVoiceMode) {
+            if (this.micBtn) this.micBtn.classList.remove('recording');
+            if (this.queryInput) {
+              this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
+            }
+            updateHud('hidden');
+          }
+        };
+
+        return sr;
+      } catch (err) {
+        console.warn('Speech recognition creation error:', err);
+        return null;
+      }
+    };
+
+    this.speechRecognition = setupRecognition(false);
 
     if (this.micBtn) {
       this.micBtn.addEventListener('click', async () => {
@@ -536,22 +533,46 @@ class ConversationalAssistant {
 
         if (this.isListening || this.isLiveVoiceMode || this.isLiveKitConnected) {
           this.isLiveVoiceMode = false;
+          this.isListening = false;
+          if (this.micBtn) this.micBtn.classList.remove('recording');
           if (this.isLiveKitConnected && this.livekitRoom) {
             try {
               await this.livekitRoom.disconnect();
               this.isLiveKitConnected = false;
             } catch (e) {}
           }
-          try {
-            this.speechRecognition.stop();
-          } catch (e) {}
+          if (this.speechRecognition) {
+            try { this.speechRecognition.stop(); } catch (e) {}
+          }
+          if (this.micStream) {
+            try {
+              this.micStream.getTracks().forEach(t => t.stop());
+              this.micStream = null;
+            } catch (e) {}
+          }
           updateHud('hidden');
           window.showToast?.('⏹️ Live Voice Mode Stopped');
         } else {
           this.isLiveVoiceMode = true;
-          updateHud('listening', '🎙️ Live Voice: Connecting WebRTC voice stream...');
+          if (this.micBtn) this.micBtn.classList.add('recording');
+          updateHud('listening', '🎙️ Requesting microphone access...');
 
-          // Try connecting to LiveKit + Speechmatics WebRTC server first
+          // 1. Proactively request hardware microphone permission
+          try {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+              this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            }
+          } catch (permErr) {
+            console.warn('Microphone permission blocked:', permErr);
+            this.isLiveVoiceMode = false;
+            if (this.micBtn) this.micBtn.classList.remove('recording');
+            updateHud('error', '⚠️ Microphone blocked. Click browser lock icon to allow.');
+            window.showToast?.('⚠️ Microphone access blocked. Please allow microphone permission in browser URL bar.');
+            return;
+          }
+
+          // 2. Try connecting to LiveKit + Speechmatics WebRTC server if online
+          updateHud('listening', '🎙️ Connecting voice stream...');
           const connectedLiveKit = await this.connectLiveKit(updateHud);
 
           if (connectedLiveKit) {
@@ -567,26 +588,28 @@ class ConversationalAssistant {
             return;
           }
 
-          // Fallback to in-browser realtime voice capture
-          updateHud('listening', '🎙️ Live Voice: Listening... Speak naturally');
-
-          // Request audio permission proactively to ensure hardware access
-          try {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-              this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            }
-          } catch (permErr) {
-            console.warn('Microphone permission request error:', permErr);
+          // 3. In-browser realtime speech recognition fallback
+          if (!this.speechRecognition) {
+            this.speechRecognition = setupRecognition(false);
           }
 
-          try {
-            this.speechRecognition.start();
-          } catch (e) {
-            console.warn('Speech recognition start error:', e);
+          if (this.speechRecognition) {
             try {
-              this.speechRecognition.stop();
-              setTimeout(() => this.speechRecognition.start(), 150);
-            } catch (retryErr) {}
+              this.speechRecognition.start();
+            } catch (e) {
+              console.warn('Speech recognition start error:', e);
+              try {
+                this.speechRecognition.stop();
+                setTimeout(() => {
+                  if (this.speechRecognition) this.speechRecognition.start();
+                }, 150);
+              } catch (retryErr) {}
+            }
+          } else {
+            this.isLiveVoiceMode = false;
+            if (this.micBtn) this.micBtn.classList.remove('recording');
+            updateHud('error', '🎙️ Speech recognition not supported. Try Chrome or Safari.');
+            window.showToast?.('💡 Speech recognition works best in Chrome or Safari. You can also click any prompt below!');
           }
         }
       });
