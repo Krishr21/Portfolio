@@ -1,0 +1,12 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1024' height='1024' viewBox='0 0 1024 1024'>
+  <rect width='1024' height='1024' fill='#06060c'/>
+  <!-- Eyes -->
+  <g fill='#ffffff' filter='drop-shadow(0px 0px 18px #00ffff)'>
+    <path d='M 300 420 Q 370 340 440 420 Q 370 380 300 420 Z' />
+    <path d='M 584 420 Q 654 340 724 420 Q 654 380 584 420 Z' />
+  </g>
+  <!-- Smile -->
+  <g fill='none' stroke='#ffffff' stroke-width='32' stroke-linecap='round' filter='drop-shadow(0px 0px 16px #00ffff)'>
+    <path d='M 420 580 Q 512 680 604 580' />
+  </g>
+</svg>

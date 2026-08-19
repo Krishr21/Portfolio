@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  
+  <title>Krish Ruparel — AI Engineer & Distributed Systems Architect</title>
+  <meta name="description" content="Portfolio of Krish Ruparel — AI Engineer & MS CS Student at UT Arlington. Specialized in multimodal RAG pipelines, agent observability, and distributed systems. Inspired by Locomotive LISA.">
+  <meta name="keywords" content="Krish Ruparel, AI Engineer, Machine Learning, RAG, LlamaIndex, Qdrant, FastAPI, Distributed Systems, UT Arlington">
+  <meta name="author" content="Krish Ruparel">
+
+  <!-- Open Graph / Social Sharing -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Krish Ruparel — AI Engineer & Distributed Systems Architect">
+  <meta property="og:description" content="Explore multimodal RAG pipelines, agentic observability platforms, and research in computer vision.">
+  <meta property="og:site_name" content="Krish Ruparel Portfolio">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+  <!-- Three.js & LiveKit WebRTC SDKs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="js/OBJLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/main.css?v=7.3">
+  <link rel="stylesheet" href="css/assistant.css?v=7.3">
+  <link rel="stylesheet" href="css/components.css?v=7.3">
+  <link rel="stylesheet" href="css/terminal.css?v=7.3">
+</head>
+<body>
+
+  <!-- Custom Cursor -->
+  <div class="custom-cursor" id="customCursor"></div>
+  <div class="custom-cursor-follower" id="customCursorFollower"></div>
+
+  <!-- Locomotive Style Preloader -->
+  <div class="preloader" id="preloader" aria-hidden="true">
+    <div class="preloader-top">
+      <div>KRISH RUPAREL // PORTFOLIO 2026</div>
+      <div id="preloaderPercent">0%</div>
+    </div>
+    <div class="preloader-center">
+      <div class="preloader-logo">
+        <span>KRISH RUPAREL</span><span class="reg">®</span>
+      </div>
+      <div class="preloader-tagline font-serif-italic">
+        Multimodal RAG &bull; Agent Observability &bull; Distributed Systems
+      </div>
+    </div>
+    <div class="preloader-bottom">
+      <div>ARLINGTON, TEXAS &bull; UT ARLINGTON (MS CS)</div>
+      <div class="preloader-progress-bar">
+        <div class="preloader-progress-fill" id="preloaderFill"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var p = document.getElementById('preloader');
+      var f = document.getElementById('preloaderFill');
+      var c = document.getElementById('preloaderPercent');
+      var progress = 0;
+      var timer = setInterval(function() {
+        progress += Math.floor(Math.random() * 25) + 15;
+        if (progress > 100) progress = 100;
+        if (f) f.style.width = progress + '%';
+        if (c) c.textContent = progress + '%';
+        if (progress >= 100) {
+          clearInterval(timer);
+          setTimeout(function() {
+            if (p) p.classList.add('loaded');
+          }, 180);
+        }
+      }, 25);
+      setTimeout(function() {
+        clearInterval(timer);
+        if (p) p.classList.add('loaded');
+      }, 700);
+    })();
+  </script>
+
+  <!-- Interactive Generative Canvas Orb -->
+  <canvas id="visualizerCanvas"></canvas>
+
+  <!-- Site Header -->
+  <header class="site-header">
+    <div class="header-left">
+      <a href="#" class="brand-logo" data-hover-shuffle>
+        KRISH<span class="dot">.</span>RUPAREL
+      </a>
+    </div>
+
+    <div class="header-center-nav">
+      <button class="mode-btn active" data-mode="assistant" id="modeAssistantBtn">
+        <span>K.R.I.S.H. Assistant</span>
+        <span class="badge-pill">3D &bull; VOICE</span>
+      </button>
+      <button class="mode-btn" data-mode="showcase" id="modeShowcaseBtn">
+        <span>Editorial Showcase</span>
+      </button>
+    </div>
+
+    <div class="header-right">
+      <!-- ⌘K Command Palette / Terminal Pill -->
+      <button class="header-cmd-pill" id="headerCliBtn" title="Open Interactive Engineering Terminal (⌘K or ~)">
+        <span class="cmd-icon">⚡</span>
+        <kbd class="cmd-kbd">⌘K</kbd>
+      </button>
+
+      <!-- Audio & Voice Synthesizer Controller -->
+      <button class="sound-toggle-btn" id="soundToggleBtn" title="Toggle Synthesized Audio Feedback">
+        <div class="sound-wave-bars">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <span id="soundToggleLabel">Audio: OFF</span>
+      </button>
+
+      <!-- Theme Switcher -->
+      <div class="theme-switch-group">
+        <button class="theme-btn active" data-theme-set="light" title="Editorial Light">☀️</button>
+        <button class="theme-btn" data-theme-set="dark" title="Stealth Dark">🌙</button>
+        <button class="theme-btn" data-theme-set="crimson" title="Locomotive Crimson">🔥</button>
+      </div>
+
+      <!-- Contact CTA -->
+      <a href="#contact" class="cta-header-btn copy-email-trigger">
+        Let's talk ↗
+      </a>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       VIEW 1: K.R.I.S.H. INTERACTIVE ASSISTANT (LOCOMOTIVE LISA 3D & VOICE MODE)
+       ========================================================================== -->
+  <main id="assistantView" class="view-container assistant-container">
+    <div class="assistant-progress-wrapper">
+      <div class="assistant-progress-bar" id="assistantProgressBar"></div>
+    </div>
+
+    <div class="assistant-stage">
+      
+      <!-- Left Column: Dialogue Speech, AI Chat Bar, Prompts & Choices -->
+      <div class="assistant-content-col">
+        <!-- Dialogue Box -->
+        <div class="assistant-dialogue-box">
+          <div class="assistant-badge">
+            <span>● K.R.I.S.H. 3D AI HOST</span>
+          </div>
+          <h1 class="assistant-speech" id="assistantSpeech">
+            Initializing K.R.I.S.H. 3D conversational host...
+          </h1>
+        </div>
+
+        <!-- Freeform Voice / Text AI Question Capsule -->
+        <div class="assistant-ai-chat-bar" id="assistantChatBar">
+          <input 
+            type="text" 
+            id="assistantQueryInput" 
+            class="assistant-chat-input" 
+            placeholder="Ask me anything: RAG stack, GPA, IEEE paper, hiring..." 
+            autocomplete="off"
+          />
+          <button class="assistant-mic-btn" id="assistantMicBtn" title="Toggle Real-Time Voice Conversation">
+            🎙
+          </button>
+          <button class="assistant-send-btn" id="assistantSendBtn">
+            <span>Ask</span> <span>→</span>
+          </button>
+        </div>
+
+        <!-- Live Real-Time Voice HUD Indicator -->
+        <div class="live-voice-hud" id="liveVoiceHud" style="display: none;">
+          <div class="live-voice-status">
+            <span class="live-voice-pulse"></span>
+            <span id="liveVoiceStatusText">🎙️ Live Voice: Listening... Speak naturally</span>
+          </div>
+          <div class="live-voice-vu" id="liveVoiceVu">
+            <div class="vu-bar"></div>
+            <div class="vu-bar"></div>
+            <div class="vu-bar"></div>
+            <div class="vu-bar"></div>
+            <div class="vu-bar"></div>
+          </div>
+        </div>
+
+        <!-- Quick Prompt Suggestion Pills -->
+        <div class="assistant-prompts-row">
+          <button class="assistant-prompt-pill trigger-challenge-btn" style="border-color: #27ae60; color: #27ae60; background: rgba(38, 166, 91, 0.08); font-weight: 600;">
+            🎯 "Take Technical Interview Challenge (4 Qs)"
+          </button>
+          <button class="assistant-prompt-pill" data-prompt="What multimodal RAG stack do you use?">
+            💬 "What RAG stack do you use?"
+          </button>
+          <button class="assistant-prompt-pill" data-prompt="Tell me about your GPA at UT Arlington">
+            🎓 "What is your GPA at UTA?"
+          </button>
+          <button class="assistant-prompt-pill" data-prompt="How did you achieve +30% throughput at Utrecht IT?">
+            ⚡ "Solace pub/sub throughput boost?"
+          </button>
+          <button class="assistant-prompt-pill" data-prompt="Tell me about your IEEE YOLOv8 research paper">
+            📑 "IEEE YOLOv8 Research paper?"
+          </button>
+        </div>
+
+        <!-- Dynamic Options / Form Area -->
+        <div class="assistant-choices-container" id="assistantChoices">
+          <!-- Injected via assistant.js -->
+        </div>
+      </div>
+
+      <!-- Right Column: 3D Model Character Avatar Viewport -->
+      <div class="assistant-bot-col">
+        <div class="assistant-3d-wrapper">
+          <div id="assistant3dContainer"></div>
+          <div class="assistant-3d-shadow"></div>
+        </div>
+        <!-- Natural Animation Emote Buttons -->
+        <div class="assistant-emotes-bar">
+          <button class="assistant-emote-btn" id="btnWave" title="Make K.R.I.S.H. wave">👋 Wave</button>
+          <button class="assistant-emote-btn" id="btnSalute" title="Make K.R.I.S.H. salute">🫡 Salute</button>
+          <button class="assistant-emote-btn" id="btnCheer" title="Make K.R.I.S.H. celebrate">✨ Cheer</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Quick Navigation Dock for Assistant -->
+    <div class="assistant-bottom-nav">
+      <button class="assistant-dock-item" onclick="window.terminalEngine && window.terminalEngine.open()" title="Open CLI Terminal (⌘K)">
+        <span class="dock-icon">⚡</span>
+        <span class="dock-label">CLI Terminal</span>
+        <kbd>⌘K</kbd>
+      </button>
+      <div class="dock-divider"></div>
+      <button class="assistant-dock-item open-resume-trigger" title="View Full Resume">
+        <span class="dock-icon">📄</span>
+        <span class="dock-label">View Resume</span>
+      </button>
+      <div class="dock-divider"></div>
+      <button class="assistant-dock-item copy-email-trigger" title="Click to copy email address">
+        <span class="dock-icon">✉️</span>
+        <span class="dock-label">krishruparel.career@gmail.com</span>
+      </button>
+      <div class="dock-divider"></div>
+      <button class="assistant-dock-item dock-item-highlight" onclick="window.switchMode('showcase')" title="Switch to Full Showcase">
+        <span class="dock-label">Editorial Showcase</span>
+        <span class="dock-arrow">→</span>
+      </button>
+    </div>
+  </main>
+
+
+  <!-- ==========================================================================
+       VIEW 2: EDITORIAL SHOWCASE (LOCOMOTIVE AGENCY STYLE)
+       ========================================================================== -->
+  <div id="showcaseView" class="view-container hidden">
+    
+    <!-- Hero Section: Grand Editorial Agency Style -->
+    <section class="hero-section hero-editorial-agency">
+      <div class="container hero-container">
+        
+        <!-- Top Status & Geo Meta Bar -->
+        <div class="hero-meta-row">
+          <div class="hero-meta-badge">
+            <span class="status-dot"></span>
+            <span>AI Engineer &bull; Distributed Systems Builder</span>
+          </div>
+          <div class="hero-meta-right">
+            <span class="meta-item">🎓 UT Arlington MS CS (3.84 GPA)</span>
+            <span class="meta-sep">&bull;</span>
+            <span id="localTimeDallas" class="font-mono meta-item">Arlington, TX</span>
+          </div>
+        </div>
+
+        <!-- Grand Editorial Headline -->
+        <h1 class="hero-headline">
+          Engineering scalable <span class="serif-accent">multimodal RAG</span>, agentic observability, &amp; <span class="serif-accent">distributed AI</span>.
+        </h1>
+
+        <!-- Editorial Bio & Philosophy -->
+        <div class="hero-bio-wrap">
+          <p class="hero-bio">
+            I'm <strong>Krish Ruparel</strong> — an AI &amp; Systems Engineer with background designing high-throughput event meshes at <strong>Utrecht IT Consulting</strong> (Netherlands) and enterprise systems at <strong>Micropro Solutions</strong> (India). I bridge deep learning research (<strong>IEEE YOLOv8 3D volume estimation</strong>) with distributed, fault-tolerant production architectures.
+          </p>
+        </div>
+
+        <!-- Action CTAs Row -->
+        <div class="hero-action-buttons">
+          <a href="#projects" class="btn-primary" data-hover-shuffle>
+            Explore Selected Works ↓
+          </a>
+          <button class="btn-secondary open-resume-trigger" data-hover-shuffle>
+            View Resume ↗
+          </button>
+          <button class="btn-secondary trigger-challenge-btn" style="border-color: rgba(38, 166, 91, 0.4); color: #27ae60; background: rgba(38, 166, 91, 0.05);" data-hover-shuffle>
+            🎯 Tech Challenge (4 Qs)
+          </button>
+          <button class="btn-secondary" onclick="window.switchMode('assistant')" data-hover-shuffle>
+            ⚡ 3D K.R.I.S.H. Host
+          </button>
+        </div>
+
+        <!-- Horizontal Impact Metric Strip -->
+        <div class="hero-stats-row">
+          <div class="hero-stat-item">
+            <span class="hero-stat-value">+30%</span>
+            <span class="hero-stat-label">Solace Event Throughput</span>
+            <span class="hero-stat-sub">Utrecht IT Consulting</span>
+          </div>
+          <div class="hero-stat-item">
+            <span class="hero-stat-value">82%</span>
+            <span class="hero-stat-label">IEEE CV Benchmark</span>
+            <span class="hero-stat-sub">3D Food Volume Research</span>
+          </div>
+          <div class="hero-stat-item">
+            <span class="hero-stat-value">3.84</span>
+            <span class="hero-stat-label">UT Arlington MS CS</span>
+            <span class="hero-stat-sub">Graduate GPA (Honors)</span>
+          </div>
+          <div class="hero-stat-item">
+            <span class="hero-stat-value">&lt;15ms</span>
+            <span class="hero-stat-label">Vector Search Latency</span>
+            <span class="hero-stat-sub">Qdrant &amp; FAISS RAG</span>
+          </div>
+        </div>
+
+        <!-- Animated Scroll Down Indicator -->
+        <a href="#projects" class="hero-scroll-indicator" aria-label="Scroll to projects">
+          <span class="scroll-label">SCROLL TO EXPLORE SELECTED WORKS</span>
+          <div class="scroll-icon-wrap">
+            <span class="scroll-arrow">↓</span>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
+
+    <!-- ==========================================================================
+         SELECTED WORKS: 4 DEDICATED FULL-SCREEN CASE STUDY PAGES
+         ========================================================================== -->
+    
+    <!-- PROJECT 01: VisionVault -->
+    <section id="projects" class="editorial-section project-slide-section">
+      <div class="container">
+        
+        <div class="project-slide-top-nav">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="project-slide-num">CASE STUDY 01 OF 04</span>
+            <span class="project-tag">MULTIMODAL RAG</span>
+          </div>
+          <div class="project-slide-jump">
+            <span>Jump to:</span>
+            <a href="#projects" class="active">01</a>
+            <a href="#project-orchestrai">02</a>
+            <a href="#project-carwise">03</a>
+            <a href="#project-yolov8">04</a>
+          </div>
+        </div>
+
+        <div class="project-slide-grid">
+          <div class="project-info-col">
+            <div class="project-card-header">
+              <span class="project-role-badge">Software Engineer &bull; Async Vector Backend</span>
+            </div>
+            <h2 class="project-title">VisionVault</h2>
+            <p class="project-desc">
+              High-performance multimodal RAG retrieval pipeline combining Whisper speech transcription and visual scene embeddings into time-aligned searchable vectors for instant conversational video search.
+            </p>
+            
+            <ul class="project-bullets">
+              <li>Engineered multimodal RAG combining Whisper audio and visual cues into time-aligned searchable chunks.</li>
+              <li>Integrated LlamaIndex for RAG index construction and local Ollama LLM synthesis for conversational QA.</li>
+              <li>Built query-time retrieval over Qdrant &amp; FAISS with Cross-Encoder reranking, cutting latency to sub-15ms.</li>
+            </ul>
+
+            <div class="project-metrics-row">
+              <span class="metric-pill">Vector DB: <span class="highlight">Qdrant &bull; FAISS</span></span>
+              <span class="metric-pill">Synthesis: <span class="highlight">LlamaIndex &bull; Ollama</span></span>
+              <span class="metric-pill">Latency: <span class="highlight">Sub-15ms Cross-Encoder</span></span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 0.25rem;">
+              <a href="#interactive-lab" class="btn-primary" style="padding: 0.5rem 1.15rem; font-size: 0.82rem;">
+                🎥 Launch Live Sandbox ↓
+              </a>
+              <div class="project-tech-stack">
+                <span class="tech-badge">Python</span>
+                <span class="tech-badge">Whisper</span>
+                <span class="tech-badge">LlamaIndex</span>
+                <span class="tech-badge">Qdrant</span>
+                <span class="tech-badge">Ollama</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="project-preview-container">
+            <div class="arch-header">
+              <span>SYSTEM ARCHITECTURE &bull; PIPELINE FLOW</span>
+              <span>SUB-SECOND RETRIEVAL</span>
+            </div>
+            <div class="arch-canvas-box">
+              <div class="arch-flow-node">
+                <span>1. Video Ingestion &amp; Whisper ASR</span>
+                <span class="node-badge">Audio Chunks</span>
+              </div>
+              <div class="arch-connector-arrow">↓</div>
+              <div class="arch-flow-node">
+                <span>2. Temporal Alignment &amp; Visual Embedding</span>
+                <span class="node-badge">Dense Vectors</span>
+              </div>
+              <div class="arch-connector-arrow">↓</div>
+              <div class="arch-flow-node">
+                <span>3. Qdrant Retrieval + Cross-Encoder Rerank</span>
+                <span class="node-badge">Top-K Precision</span>
+              </div>
+              <div class="arch-connector-arrow">↓</div>
+              <div class="arch-flow-node">
+                <span>4. LlamaIndex + Ollama Local Synthesis</span>
+                <span class="node-badge">Zero Hallucination</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-slide-footer">
+          <a href="#project-orchestrai" class="project-scroll-hint">↓ Scroll to next case study</a>
+          <a href="#project-orchestrai" class="project-next-btn">Next: OrchestrAI (02) ↓</a>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- PROJECT 02: OrchestrAI -->
+    <section id="project-orchestrai" class="editorial-section project-slide-section">
+      <div class="container">
+        
+        <div class="project-slide-top-nav">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="project-slide-num">CASE STUDY 02 OF 04</span>
+            <span class="project-tag">AGENT OBSERVABILITY</span>
+          </div>
+          <div class="project-slide-jump">
+            <span>Jump to:</span>
+            <a href="#projects">01</a>
+            <a href="#project-orchestrai" class="active">02</a>
+            <a href="#project-carwise">03</a>
+            <a href="#project-yolov8">04</a>
+          </div>
+        </div>
+
+        <div class="project-slide-grid">
+          <div class="project-info-col">
+            <div class="project-card-header">
+              <span class="project-role-badge">Software Engineer &bull; Distributed Systems</span>
+            </div>
+            <h2 class="project-title">OrchestrAI</h2>
+            <p class="project-desc">
+              Local-first AI agent observability platform to record agent runs step-by-step with persistent storage, real-time WebSocket telemetry, and deterministic offline evaluation pipelines.
+            </p>
+
+            <ul class="project-bullets">
+              <li>Built local-first agent observability platform recording step-by-step traces with persistent Postgres storage.</li>
+              <li>Executed real-time streaming using Redis Pub/Sub + WebSockets with Celery offline evaluation pipelines.</li>
+              <li>Instrumented distributed services with OpenTelemetry and containerized with Docker Compose.</li>
+            </ul>
+
+            <div class="project-metrics-row">
+              <span class="metric-pill">Telemetry: <span class="highlight">&lt; 10ms Latency</span></span>
+              <span class="metric-pill">Streaming: <span class="highlight">Redis Pub/Sub &bull; WS</span></span>
+              <span class="metric-pill">Reliability: <span class="highlight">100% Deterministic Replay</span></span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 0.25rem;">
+              <a href="#interactive-lab" class="btn-primary" style="padding: 0.5rem 1.15rem; font-size: 0.82rem;">
+                ⚡ Launch Live Telemetry ↓
+              </a>
+              <div class="project-tech-stack">
+                <span class="tech-badge">FastAPI</span>
+                <span class="tech-badge">Postgres</span>
+                <span class="tech-badge">Redis</span>
+                <span class="tech-badge">Celery</span>
+                <span class="tech-badge">Docker</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="project-preview-container">
+            <div class="arch-header">
+              <span>OBSERVABILITY TRACE STACK</span>
+              <span>REAL-TIME WS</span>
+            </div>
+            <div class="arch-canvas-box">
+              <div class="arch-flow-node">
+                <span>FastAPI Worker Core + OpenTelemetry</span>
+                <span class="node-badge">Span Traces</span>
+              </div>
+              <div class="arch-connector-arrow">↓</div>
+              <div class="arch-flow-node">
+                <span>Redis Pub/Sub Real-Time Broadcast</span>
+                <span class="node-badge">WebSockets</span>
+              </div>
+              <div class="arch-connector-arrow">↓</div>
+              <div class="arch-flow-node">
+                <span>PostgreSQL (Alembic) + Celery Eval</span>
+                <span class="node-badge">Replay Engine</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-slide-footer">
+          <a href="#project-carwise" class="project-scroll-hint">↓ Scroll to next case study</a>
+          <a href="#project-carwise" class="project-next-btn">Next: CarWise-AI (03) ↓</a>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- PROJECT 03: CarWise-AI -->
+    <section id="project-carwise" class="editorial-section project-slide-section">
+      <div class="container">
+        
+        <div class="project-slide-top-nav">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="project-slide-num">CASE STUDY 03 OF 04</span>
+            <span class="project-tag">AI SEARCH GROUNDING</span>
+          </div>
+          <div class="project-slide-jump">
+            <span>Jump to:</span>
+            <a href="#projects">01</a>
+            <a href="#project-orchestrai">02</a>
+            <a href="#project-carwise" class="active">03</a>
+            <a href="#project-yolov8">04</a>
+          </div>
+        </div>
+
+        <div class="project-slide-grid">
+          <div class="project-info-col">
+            <div class="project-card-header">
+              <span class="project-role-badge">Software Engineer &bull; Web Grounding</span>
+            </div>
+            <h2 class="project-title">CarWise-AI</h2>
+            <p class="project-desc">
+              Live-search powered automotive discovery assistant utilizing Google Gemini's native Search Grounding to fetch real, verifiable listings and auto-generate structured comparison insights.
+            </p>
+
+            <ul class="project-bullets">
+              <li>Built live car discovery assistant using Google Gemini Search Grounding for real-time verifiable dealer feeds.</li>
+              <li>Integrated Gemini Flash to auto-generate verified pros, cons, and summaries replacing hallucinations.</li>
+              <li>Designed side-by-side comparison grid surfacing price, mileage, and links for data-driven decisions.</li>
+            </ul>
+
+            <div class="project-metrics-row">
+              <span class="metric-pill">Grounding: <span class="highlight">Google Search Grounding</span></span>
+              <span class="metric-pill">Model: <span class="highlight">Gemini Flash</span></span>
+              <span class="metric-pill">Data: <span class="highlight">Live Feeds</span></span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 0.25rem;">
+              <a href="#interactive-lab" class="btn-primary" style="padding: 0.5rem 1.15rem; font-size: 0.82rem;">
+                🚗 Launch Live Sandbox ↓
+              </a>
+              <div class="project-tech-stack">
+                <span class="tech-badge">Gemini API</span>
+                <span class="tech-badge">React</span>
+                <span class="tech-badge">TypeScript</span>
+                <span class="tech-badge">REST</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="project-preview-container">
+            <div class="arch-header">
+              <span>GEMINI SEARCH GROUNDING PIPELINE</span>
+              <span>VERIFIED DATA</span>
+            </div>
+            <div class="arch-canvas-box">
+              <div class="arch-flow-node">
+                <span>User Query: e.g. "Long range EV under $30k"</span>
+                <span class="node-badge">Intent</span>
+              </div>
+              <div class="arch-connector-arrow">↓</div>
+              <div class="arch-flow-node">
+                <span>Gemini Grounding Tool with Google Search</span>
+                <span class="node-badge">Live Web Indices</span>
+              </div>
+              <div class="arch-connector-arrow">↓</div>
+              <div class="arch-flow-node">
+                <span>Flash Summaries + Side-by-Side Grid</span>
+                <span class="node-badge">Verified Pros/Cons</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-slide-footer">
+          <a href="#project-yolov8" class="project-scroll-hint">↓ Scroll to next case study</a>
+          <a href="#project-yolov8" class="project-next-btn">Next: IEEE YOLOv8 Paper (04) ↓</a>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- PROJECT 04: IEEE YOLOv8 Paper -->
+    <section id="project-yolov8" class="editorial-section project-slide-section">
+      <div class="container">
+        
+        <div class="project-slide-top-nav">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="project-slide-num">CASE STUDY 04 OF 04</span>
+            <span class="project-tag" style="background-color: rgba(217, 56, 46, 0.12); color: var(--accent-secondary);">IEEE PEER-REVIEWED PAPER</span>
+          </div>
+          <div class="project-slide-jump">
+            <span>Jump to:</span>
+            <a href="#projects">01</a>
+            <a href="#project-orchestrai">02</a>
+            <a href="#project-carwise">03</a>
+            <a href="#project-yolov8" class="active">04</a>
+          </div>
+        </div>
+
+        <div class="project-slide-grid">
+          <div class="project-info-col">
+            <div class="project-card-header">
+              <span class="project-role-badge">Co-Author &bull; Computer Vision &bull; IEEE Presentation</span>
+            </div>
+            <h2 class="project-title" style="font-size: clamp(1.5rem, 2.2vw, 2rem);">Advances in Food Recognition &amp; 3D Volume Estimation</h2>
+            <p class="project-desc">
+              Peer-reviewed research paper benchmarking YOLOv8 against Faster R-CNN and SSD across speed and accuracy metrics, accompanied by a custom 1,000-image dataset and 3D volume reconstruction models.
+            </p>
+
+            <ul class="project-bullets">
+              <li>Co-authored peer-reviewed research benchmarking YOLOv8 against Faster R-CNN across speed &amp; accuracy.</li>
+              <li>Built custom Indian food dataset, achieving 82% recognition accuracy on 1,000-image multi-lighting benchmark.</li>
+              <li>Analyzed 3D volume estimation using stereo vision, GANs, and Structure from Motion (SfM) for nutritional AI.</li>
+            </ul>
+
+            <div class="project-metrics-row">
+              <span class="metric-pill">Recognition Acc: <span class="highlight">82% on 1K Benchmark</span></span>
+              <span class="metric-pill">Model: <span class="highlight">YOLOv8 vs Faster R-CNN</span></span>
+              <span class="metric-pill">3D Vision: <span class="highlight">Stereo &bull; SfM</span></span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 0.25rem;">
+              <button class="btn-primary open-resume-trigger" style="padding: 0.5rem 1.15rem; font-size: 0.82rem;">
+                📄 View Full IEEE Citation ↗
+              </button>
+              <div class="project-tech-stack">
+                <span class="tech-badge">YOLOv8</span>
+                <span class="tech-badge">OpenCV</span>
+                <span class="tech-badge">PyTorch</span>
+                <span class="tech-badge">SfM</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="project-preview-container">
+            <div class="arch-header">
+              <span>RESEARCH EVALUATION BENCHMARK</span>
+              <span>IEEE PUBLICATION</span>
+            </div>
+            <div class="arch-canvas-box">
+              <div class="arch-flow-node">
+                <span>Custom 1,000-Image Indian Food Dataset</span>
+                <span class="node-badge">Multi-Lighting</span>
+              </div>
+              <div class="arch-connector-arrow">↓</div>
+              <div class="arch-flow-node">
+                <span>YOLOv8 Object Detection &amp; Segmentation</span>
+                <span class="node-badge">82% Accuracy</span>
+              </div>
+              <div class="arch-connector-arrow">↓</div>
+              <div class="arch-flow-node">
+                <span>3D Volume &amp; Calorie Estimation (SfM / Stereo)</span>
+                <span class="node-badge">Nutritional AI</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-slide-footer">
+          <a href="#interactive-lab" class="project-scroll-hint">↓ Scroll to interactive system lab</a>
+          <a href="#interactive-lab" class="project-next-btn">Next Section: Interactive Lab (02) ↓</a>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ==========================================================================
+         SECTION 02: INTERACTIVE SYSTEMS LAB SLIDE
+         ========================================================================== -->
+    <section id="interactive-lab" class="editorial-section project-slide-section lab-slide-section">
+      <div class="container">
+        
+        <div class="project-slide-top-nav">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="project-slide-num">INTERACTIVE SYSTEMS LAB &bull; SECTION 02 OF 06</span>
+            <span class="project-tag">LIVE SIMULATION SANDBOX</span>
+          </div>
+          <div class="project-slide-jump">
+            <span>Jump to:</span>
+            <a href="#projects">01</a>
+            <a href="#interactive-lab" class="active">02</a>
+            <a href="#experience">03</a>
+            <a href="#skills">04</a>
+            <a href="#education">05</a>
+            <a href="#contact">06</a>
+          </div>
+        </div>
+
+        <div class="slide-main-content">
+          <div class="slide-header-block">
+            <h2 class="section-title" style="font-size: clamp(1.6rem, 2.2vw, 2.2rem); margin-bottom: 0.3rem;">Test the Systems Live.</h2>
+            <p class="section-lead" style="font-size: 0.9rem; margin-bottom: 0.8rem;">
+              Interact with simulated instances of Krish's production architectures: run multimodal vector queries, inspect WebSocket agent traces, and view Gemini grounded searches.
+            </p>
+          </div>
+
+          <div class="demo-lab-container">
+            <nav class="demo-tabs-nav">
+              <button class="demo-tab-btn active" data-tab="tabVisionVault">
+                <span>🎥 VisionVault RAG Simulator</span>
+              </button>
+              <button class="demo-tab-btn" data-tab="tabOrchestrAI">
+                <span>⚡ OrchestrAI Agent Telemetry</span>
+              </button>
+              <button class="demo-tab-btn" data-tab="tabCarWise">
+                <span>🚗 CarWise-AI Grounding Grid</span>
+              </button>
+            </nav>
+
+            <!-- TAB 1: VisionVault RAG Simulator -->
+            <div class="demo-tab-panel active" id="tabVisionVault">
+              <div class="demo-console-header">
+                <div class="demo-console-title">Multimodal Video RAG Query Sandbox</div>
+                <span class="demo-live-badge">● Qdrant &amp; Cross-Encoder Online</span>
+              </div>
+
+              <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                <button class="tech-badge rag-preset-chip" data-query="vector similarity search trade-offs">
+                  "vector similarity trade-offs"
+                </button>
+                <button class="tech-badge rag-preset-chip" data-query="cross-encoder reranking latency">
+                  "cross-encoder reranking latency"
+                </button>
+                <button class="tech-badge rag-preset-chip" data-query="synthesis with local ollama model">
+                  "synthesis with local ollama"
+                </button>
+              </div>
+
+              <div class="rag-sim-search" style="margin-bottom: 0.85rem;">
+                <input type="text" id="ragQueryInput" class="rag-sim-input" value="vector similarity search trade-offs" placeholder="Enter video query..." />
+                <button class="btn-primary" id="ragRunBtn" style="padding: 0.5rem 1rem; font-size: 0.82rem;">Execute RAG Search →</button>
+              </div>
+
+              <div class="rag-results-grid" id="ragResultsContainer">
+                <div class="rag-result-col">
+                  <span class="rag-col-label">1. Whisper Temporal Audio Chunk</span>
+                  <div class="rag-result-card">
+                    <div class="rag-card-meta">
+                      <span>Timestamp Aligned</span>
+                      <span class="score-badge">Initial: 0.812 Cosine</span>
+                    </div>
+                    <p style="font-size: 0.82rem;">[02:14 - 02:45] '...we benchmarked Qdrant against FAISS for vector indexing. By tuning HNSW m and ef_construct params, we achieved sub-15ms retrieval with 98.4% recall...'</p>
+                  </div>
+                </div>
+
+                <div class="rag-result-col">
+                  <span class="rag-col-label">2. Cross-Encoder Reranked Synthesis</span>
+                  <div class="rag-result-card" style="border-left: 3px solid var(--accent-secondary);">
+                    <div class="rag-card-meta">
+                      <span>Precision Reranked (Latency: 14.2 ms)</span>
+                      <span class="score-badge" style="color: var(--accent-secondary);">0.964 Cross-Encoder</span>
+                    </div>
+                    <p style="font-size: 0.82rem;"><strong>Vision Context:</strong> Frame 4120: Architecture slide with vector space dimensionality &amp; Qdrant cluster</p>
+                    <div style="margin-top: 0.35rem; font-size: 0.74rem; color: var(--text-muted); font-family: var(--font-mono);">
+                      LlamaIndex synthesis ready → Streamed to Ollama local LLM
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB 2: OrchestrAI Telemetry Console -->
+            <div class="demo-tab-panel" id="tabOrchestrAI">
+              <div class="demo-console-header">
+                <div class="demo-console-title">Live Agent Observability &amp; Deterministic Replay</div>
+                <span class="demo-live-badge">● Redis Pub/Sub Stream Connected</span>
+              </div>
+
+              <div class="orchestr-telemetry-box">
+                <div class="orchestr-telemetry-header">
+                  <div class="orchestr-telemetry-dots">
+                    <span class="term-dot red"></span>
+                    <span class="term-dot yellow"></span>
+                    <span class="term-dot green"></span>
+                  </div>
+                  <span class="orchestr-telemetry-title">orchestrai-agent-stream.local [FastAPI / Celery / OpenTelemetry]</span>
+                  <span class="orchestr-live-indicator">LIVE WS ●</span>
+                </div>
+                <div class="orchestr-telemetry-body" id="orchestrTerminalBody">
+                  <div class="terminal-line">
+                    <span class="timestamp">[00:00.012]</span>
+                    <span class="event-tag">&lt;INIT&gt;</span>
+                    <span class="highlight">Agent session spawned: ID #agy-892f-worker1</span>
+                  </div>
+                  <div class="terminal-line">
+                    <span class="timestamp">[00:00.045]</span>
+                    <span class="event-tag">&lt;REDIS&gt;</span>
+                    <span>Subscribed to channel 'agent.runs.stream.892f' via WebSockets</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="orchestr-telemetry-controls">
+                <button class="btn-primary" id="termPlayBtn" style="padding: 0.45rem 1rem; font-size: 0.82rem;">▶ Play Live Replay</button>
+                <button class="btn-secondary" id="termStepBtn" style="padding: 0.45rem 1rem; font-size: 0.82rem;">Step Next ⏭</button>
+                <button class="btn-secondary" id="termResetBtn" style="padding: 0.45rem 1rem; font-size: 0.82rem;">Reset Terminal ↺</button>
+              </div>
+            </div>
+
+            <!-- TAB 3: CarWise-AI Grounding Grid -->
+            <div class="demo-tab-panel" id="tabCarWise">
+              <div class="demo-console-header">
+                <div class="demo-console-title">Google Gemini Search Grounding Showcase</div>
+                <span class="demo-live-badge">● Gemini 1.5 Flash Connected</span>
+              </div>
+              
+              <p style="font-size: 0.84rem; color: var(--text-secondary); margin-bottom: 0.85rem;">
+                Gemini Flash queries live marketplace feeds, computes accurate trade-offs, and outputs structured pros &amp; cons.
+              </p>
+
+              <div class="carwise-grid" id="carwiseGridContainer">
+                <!-- Injected via demos.js -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-slide-footer">
+          <a href="#experience" class="project-scroll-hint">↓ Scroll to career timeline</a>
+          <a href="#experience" class="project-next-btn">Next Section: Experience (03) ↓</a>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ==========================================================================
+         SECTION 03: EXPERIENCE & INDUSTRY TRACK RECORD SLIDE
+         ========================================================================== -->
+    <section id="experience" class="editorial-section project-slide-section experience-slide-section">
+      <div class="container">
+        
+        <div class="project-slide-top-nav">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="project-slide-num">INDUSTRY TRACK RECORD &bull; SECTION 03 OF 06</span>
+            <span class="project-tag">ENTERPRISE SYSTEMS</span>
+          </div>
+          <div class="project-slide-jump">
+            <span>Jump to:</span>
+            <a href="#projects">01</a>
+            <a href="#interactive-lab">02</a>
+            <a href="#experience" class="active">03</a>
+            <a href="#skills">04</a>
+            <a href="#education">05</a>
+            <a href="#contact">06</a>
+          </div>
+        </div>
+
+        <div class="slide-main-content">
+          <div class="slide-header-block">
+            <h2 class="section-title" style="font-size: clamp(1.6rem, 2.2vw, 2.2rem); margin-bottom: 0.3rem;">Industry Track Record.</h2>
+            <p class="section-lead" style="font-size: 0.9rem; margin-bottom: 0.85rem;">
+              Building and optimizing production-grade data pipelines, distributed messaging systems, and custom AI agents.
+            </p>
+          </div>
+
+          <div class="experience-two-col-grid">
+            
+            <!-- EXPERIENCE 1: Utrecht IT Consulting -->
+            <div class="experience-card">
+              <div class="exp-card-header">
+                <div>
+                  <div class="timeline-company" style="font-size: 1.35rem;">Utrecht IT Consulting</div>
+                  <div class="timeline-role" style="font-size: 0.95rem; margin-bottom: 0.5rem;">Automation &amp; Integration Consultant</div>
+                </div>
+                <div class="timeline-meta" style="flex-direction: column; align-items: flex-end; gap: 0.2rem;">
+                  <span style="font-weight: 600; color: var(--text-primary);">Oct 2024 – Aug 2025</span>
+                  <span>Netherlands</span>
+                </div>
+              </div>
+              <ul class="timeline-bullets" style="gap: 0.4rem;">
+                <li style="font-size: 0.86rem;">Engineered custom SDK connectors leveraging Solace pub/sub messaging model to decouple data workflows.</li>
+                <li style="font-size: 0.86rem;">Improved real-time event processing throughput by 30% across high-load enterprise services.</li>
+                <li style="font-size: 0.86rem;">Embedded custom AI agents using Workato Agent Studio with built-in governance and security.</li>
+                <li style="font-size: 0.86rem;">Automated end-to-end operational workflows using Python, eliminating bottlenecks.</li>
+              </ul>
+            </div>
+
+            <!-- EXPERIENCE 2: Micropro Solutions -->
+            <div class="experience-card">
+              <div class="exp-card-header">
+                <div>
+                  <div class="timeline-company" style="font-size: 1.35rem;">Micropro Solutions</div>
+                  <div class="timeline-role" style="font-size: 0.95rem; margin-bottom: 0.5rem;">Artificial Intelligence Engineering Intern</div>
+                </div>
+                <div class="timeline-meta" style="flex-direction: column; align-items: flex-end; gap: 0.2rem;">
+                  <span style="font-weight: 600; color: var(--text-primary);">Mar 2024 – Sep 2024</span>
+                  <span>Nagpur, India</span>
+                </div>
+              </div>
+              <ul class="timeline-bullets" style="gap: 0.4rem;">
+                <li style="font-size: 0.86rem;">Deployed multimodal RAG combining Whisper audio and frame captioning for video search.</li>
+                <li style="font-size: 0.86rem;">Built query retrieval over Qdrant/FAISS with Cross-Encoder reranking for precision at scale.</li>
+                <li style="font-size: 0.86rem;">Instrumented distributed AI services with OpenTelemetry and containerized via Docker.</li>
+                <li style="font-size: 0.86rem;">Streamed live agent runs using Redis Pub/Sub + WebSockets for deterministic offline replay.</li>
+              </ul>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="project-slide-footer">
+          <a href="#skills" class="project-scroll-hint">↓ Scroll to technical skills</a>
+          <a href="#skills" class="project-next-btn">Next Section: Skills Matrix (04) ↓</a>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ==========================================================================
+         SECTION 04: TECHNICAL MATRIX & 3D CYBER TECH GALAXY
+         ========================================================================== -->
+    <section id="skills" class="editorial-section project-slide-section skills-slide-section">
+      <div class="container">
+        
+        <div class="project-slide-top-nav">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="project-slide-num">TECHNICAL MATRIX &bull; SECTION 04 OF 06</span>
+            <span class="project-tag">3D INTERACTIVE TECH GALAXY</span>
+          </div>
+          <div class="project-slide-jump">
+            <span>Jump to:</span>
+            <a href="#projects">01</a>
+            <a href="#interactive-lab">02</a>
+            <a href="#experience">03</a>
+            <a href="#skills" class="active">04</a>
+            <a href="#education">05</a>
+            <a href="#contact">06</a>
+          </div>
+        </div>
+
+        <div class="slide-main-content galaxy-full-showcase">
+          
+          <!-- Top Row: Section Heading + Category Filter Tabs -->
+          <div class="galaxy-top-controls">
+            <div>
+              <div class="galaxy-section-badge">✦ TECHNICAL EXPERTISE</div>
+              <h2 class="section-title" style="font-size: clamp(1.4rem, 2vw, 1.9rem); margin-bottom: 0;">Core Competencies &amp; Stack.</h2>
+            </div>
+
+            <!-- Category Filter Tabs (Inspired by About.jsx) -->
+            <div class="galaxy-filter-tabs" id="galaxyFilterBar">
+              <button class="galaxy-tab-btn active" data-constellation="all">
+                🌌 Full Galaxy
+              </button>
+              <button class="galaxy-tab-btn" data-constellation="ai">
+                ⚡ AI &amp; ML
+              </button>
+              <button class="galaxy-tab-btn" data-constellation="systems">
+                🛠 Systems &amp; Cloud
+              </button>
+              <button class="galaxy-tab-btn" data-constellation="languages">
+                💻 Core Languages
+              </button>
+              <button class="galaxy-tab-btn" data-constellation="data">
+                🗄 Data Engineering
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Stage: 3D Tech Galaxy Stage with Real-Time HTML Projection Badges -->
+          <div class="galaxy-stage-container" id="techGalaxyStage">
+            <div class="galaxy-canvas-wrap" id="techGalaxyContainer">
+              <!-- Three.js Canvas -->
+            </div>
+            
+            <!-- HTML Floating 3D Tracked Badges Overlay -->
+            <div class="galaxy-badges-overlay" id="galaxyBadgesOverlay">
+              <!-- Dynamically positioned on 3D node coordinates -->
+            </div>
+
+            <!-- Top Left Status HUD -->
+            <div class="galaxy-stage-badge">
+              <span class="pulse-dot-vermilion"></span>
+              <span>3D Tech Orbit // Drag to Rotate &bull; Click nodes for deep dive</span>
+            </div>
+
+            <!-- Bottom Floating Node Detail Inspector HUD -->
+            <div class="galaxy-hover-inspector" id="galaxyHoverInspector">
+              <div class="inspector-badge" id="inspectorDomain">⚡ VECTOR RAG</div>
+              <div class="inspector-title" id="inspectorTitle">Qdrant / FAISS</div>
+              <div class="inspector-desc" id="inspectorDesc">Sub-15ms dense embeddings retrieval &amp; hybrid vector search</div>
+              <div class="inspector-used" id="inspectorUsed">Deployed in: <strong id="inspectorUsedText">VisionVault &amp; Micropro</strong></div>
+            </div>
+          </div>
+
+          <!-- Bottom Row: 4-Column Skill Level Cards with Animated Progress Bars (from About.jsx) -->
+          <div class="galaxy-skill-bars-row" id="galaxySkillBarsRow">
+            <!-- Populated dynamically via JS -->
+          </div>
+
+        </div>
+
+        <div class="project-slide-footer">
+          <a href="#education" class="project-scroll-hint">↓ Scroll to academic foundation</a>
+          <a href="#education" class="project-next-btn">Next Section: Education (05) ↓</a>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ==========================================================================
+         SECTION 05: ACADEMIC FOUNDATION & DEGREES SLIDE
+         ========================================================================== -->
+    <section id="education" class="editorial-section project-slide-section education-slide-section">
+      <div class="container">
+        
+        <div class="project-slide-top-nav">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="project-slide-num">ACADEMIC FOUNDATION &bull; SECTION 05 OF 06</span>
+            <span class="project-tag">DEGREES &amp; CREDENTIALS</span>
+          </div>
+          <div class="project-slide-jump">
+            <span>Jump to:</span>
+            <a href="#projects">01</a>
+            <a href="#interactive-lab">02</a>
+            <a href="#experience">03</a>
+            <a href="#skills">04</a>
+            <a href="#education" class="active">05</a>
+            <a href="#contact">06</a>
+          </div>
+        </div>
+
+        <div class="slide-main-content">
+          <div class="slide-header-block">
+            <h2 class="section-title" style="font-size: clamp(1.6rem, 2.2vw, 2.2rem); margin-bottom: 0.3rem;">Academic Foundation.</h2>
+            <p class="section-lead" style="font-size: 0.9rem; margin-bottom: 0.85rem;">
+              Advanced graduate and undergraduate foundations in algorithms, computer vision, and systems architecture.
+            </p>
+          </div>
+
+          <div class="edu-grid" style="gap: 1.5rem; margin-bottom: 1rem;">
+            
+            <div class="edu-card" style="padding: 1.75rem;">
+              <div>
+                <div class="edu-institution" style="font-size: 1.35rem;">University of Texas, Arlington</div>
+                <div class="edu-degree" style="font-size: 1rem; margin-bottom: 0.5rem;">Master of Science — MS, Computer Science</div>
+                <div class="edu-gpa-badge" style="font-size: 0.8rem; padding: 0.25rem 0.6rem; margin-bottom: 0.75rem;">GPA: 3.84 / 4.0 &bull; Aug 2025 – May 2027</div>
+                <div class="edu-courses" style="font-size: 0.84rem;">
+                  <strong>Key Coursework:</strong> Advanced Algorithms, Data Modelling, Data Mining, Artificial Intelligence, Computer Vision.
+                </div>
+              </div>
+              <div style="margin-top: 0.75rem; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">
+                Arlington, Texas
+              </div>
+            </div>
+
+            <div class="edu-card" style="padding: 1.75rem;">
+              <div>
+                <div class="edu-institution" style="font-size: 1.35rem;">University of Pune</div>
+                <div class="edu-degree" style="font-size: 1rem; margin-bottom: 0.5rem;">Bachelor of Engineering — BE, Computer Engineering</div>
+                <div class="edu-gpa-badge" style="font-size: 0.8rem; padding: 0.25rem 0.6rem; margin-bottom: 0.75rem;">GPA: 3.4 / 4.0 &bull; Aug 2021 – May 2025</div>
+                <div class="edu-courses" style="font-size: 0.84rem;">
+                  <strong>Key Coursework:</strong> Data Structures, Database Management, Software Engineering, Machine Learning, Cloud Computing.
+                </div>
+              </div>
+              <div style="margin-top: 0.75rem; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">
+                Pune, India
+              </div>
+            </div>
+          </div>
+
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem 1.5rem;">
+            <div style="font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.4rem;">
+              Professional Certifications
+            </div>
+            <div class="skill-pills-list" style="gap: 0.4rem;">
+              <span class="skill-badge">Full Stack Web Development – Apna College</span>
+              <span class="skill-badge">Workato Automation Pro – I (WAP-01)</span>
+              <span class="skill-badge">Workato Automation Pro – II (WAP-02)</span>
+              <span class="skill-badge">Workato Automation Pro – III (WAP-03)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-slide-footer">
+          <a href="#contact" class="project-scroll-hint">↓ Scroll to collaboration &amp; contact</a>
+          <a href="#contact" class="project-next-btn">Next Section: Contact (06) ↓</a>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ==========================================================================
+         SECTION 06: CONTACT & FOOTER SLIDE
+         ========================================================================== -->
+    <footer id="contact" class="site-footer project-slide-section contact-slide-section">
+      <div class="container">
+        
+        <div class="project-slide-top-nav">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="project-slide-num">COLLABORATION &bull; SECTION 06 OF 06</span>
+            <span class="project-tag">FALL 2026 &amp; SPRING 2027 ROLES</span>
+          </div>
+          <div class="project-slide-jump">
+            <span>Jump to:</span>
+            <a href="#projects">01</a>
+            <a href="#interactive-lab">02</a>
+            <a href="#experience">03</a>
+            <a href="#skills">04</a>
+            <a href="#education">05</a>
+            <a href="#contact" class="active">06</a>
+          </div>
+        </div>
+
+        <div class="slide-main-content">
+          <h2 class="footer-hero-headline" style="font-size: clamp(2rem, 3.5vw, 3.2rem); margin-bottom: 1.25rem;">
+            Let's build something <span class="serif-accent">extraordinary</span> together.
+          </h2>
+
+          <div class="footer-contact-box" style="padding: 1.75rem; margin-bottom: 1.5rem;">
+            <p style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+              Open for AI Engineer roles in <strong>Fall 2026 &amp; Spring 2027</strong>. Let's discuss multimodal RAG and agent observability:
+            </p>
+
+            <a href="mailto:krishruparel.career@gmail.com" class="footer-email-trigger copy-email-trigger" style="font-size: clamp(1.2rem, 2vw, 1.6rem); margin-bottom: 1rem;" data-hover-shuffle>
+              krishruparel.career@gmail.com ↗
+            </a>
+
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button class="btn-primary open-resume-trigger" style="padding: 0.5rem 1.2rem; font-size: 0.84rem;" data-hover-shuffle>
+                📄 Open Full Resume Modal
+              </button>
+              <button class="btn-secondary" onclick="window.switchMode('assistant')" style="padding: 0.5rem 1.2rem; font-size: 0.84rem;" data-hover-shuffle>
+                ⚡ Launch 3D K.R.I.S.H. Assistant
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-sub-grid">
+          <div class="footer-brand-col">
+            <div class="footer-brand-name">
+              Krish Ruparel
+            </div>
+            <p class="footer-brand-text">Arlington, Texas 76013 &bull; (682)-392-0214</p>
+            <p class="footer-brand-text">Master's in Computer Science @ UT Arlington</p>
+          </div>
+
+          <div class="footer-links-col">
+            <div class="footer-col-label">CONNECT</div>
+            <a href="https://www.linkedin.com/in/krishruparel21/" target="_blank" rel="noreferrer" data-hover-shuffle>LinkedIn ↗</a>
+            <a href="https://github.com/Krishr21" target="_blank" rel="noreferrer" data-hover-shuffle>GitHub ↗</a>
+            <a href="mailto:krishruparel.career@gmail.com" class="copy-email-trigger" data-hover-shuffle>Email ↗</a>
+          </div>
+
+          <div class="footer-links-col">
+            <div class="footer-col-label">NAVIGATION</div>
+            <a href="#projects" data-hover-shuffle>Selected Works (01)</a>
+            <a href="#interactive-lab" data-hover-shuffle>Interactive Lab (02)</a>
+            <a href="#experience" data-hover-shuffle>Experience (03)</a>
+            <a href="#skills" data-hover-shuffle>Skills Matrix (04)</a>
+            <a href="#education" data-hover-shuffle>Education (05)</a>
+            <a href="#contact" data-hover-shuffle>Collaboration (06)</a>
+          </div>
+        </div>
+
+        <div class="footer-bottom-row" style="padding-top: 0.75rem; font-size: 0.75rem;">
+          <div>&copy; 2026 Krish Ruparel. Designed with Locomotive agency aesthetics.</div>
+          <div>All rights reserved.</div>
+        </div>
+
+      </div>
+    </footer>
+
+  </div>
+
+
+  <!-- ==========================================================================
+       MODAL: PRINTABLE FULL RESUME INSPECTOR
+       ========================================================================== -->
+  <div class="resume-modal-backdrop" id="resumeModal" aria-hidden="true">
+    <div class="resume-modal-window">
+      <div class="resume-modal-header">
+        <div class="resume-modal-title">Krish Ruparel &bull; Curriculum Vitae</div>
+        <div class="resume-modal-actions">
+          <button class="btn-primary" id="printResumeBtn" style="padding: 0.4rem 1rem; font-size: 0.82rem;">
+            🖨 Print / PDF
+          </button>
+          <button class="btn-secondary copy-email-trigger" style="padding: 0.4rem 1rem; font-size: 0.82rem;">
+            📋 Copy Email
+          </button>
+          <button class="btn-secondary" id="closeResumeModal" style="padding: 0.4rem 0.8rem; font-size: 0.82rem;">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <div class="resume-modal-content">
+        <div class="resume-paper" id="resumePaper">
+          <!-- HEADER -->
+          <div class="resume-header-block">
+            <h1 class="resume-name">Krish Ruparel</h1>
+            <div class="resume-contact-line">
+              <span>Arlington, Texas 76013</span>
+              <span class="sep">•</span>
+              <a href="mailto:krishruparel.career@gmail.com">krishruparel.career@gmail.com</a>
+              <span class="sep">•</span>
+              <span>(682)-392-0214</span>
+              <span class="sep">•</span>
+              <a href="https://www.linkedin.com/in/krishruparel21/" target="_blank" rel="noreferrer">LinkedIn</a>
+              <span class="sep">•</span>
+              <a href="https://github.com/Krishr21" target="_blank" rel="noreferrer">GitHub</a>
+              <span class="sep">•</span>
+              <a href="https://krishruparel.com" target="_blank" rel="noreferrer">Portfolio</a>
+            </div>
+          </div>
+
+          <!-- EDUCATION -->
+          <div class="resume-section">
+            <h2 class="resume-section-title">Education</h2>
+            <div class="resume-entry">
+              <div class="resume-row resume-row-bold">
+                <span>University of Texas, Arlington</span>
+                <span>Aug 2025 - May 2027</span>
+              </div>
+              <div class="resume-row resume-row-italic">
+                <span>Master of Science - MS, Computer Science</span>
+                <span>GPA: 3.84/4.0</span>
+              </div>
+              <div class="resume-coursework">
+                Coursework: Advanced Algorithms, Data Modelling, Data Mining, Artificial Intelligence, Computer Vision
+              </div>
+            </div>
+            <div class="resume-entry">
+              <div class="resume-row resume-row-bold">
+                <span>University of Pune</span>
+                <span>Aug 2021 - May 2025</span>
+              </div>
+              <div class="resume-row resume-row-italic">
+                <span>Bachelor of Engineering - BE, Computer Engineering</span>
+                <span>GPA: 3.4/4.0</span>
+              </div>
+              <div class="resume-coursework">
+                Coursework: Data Structures, Database Management, Software Engineering, Machine Learning, Cloud Computing and Big Data
+              </div>
+            </div>
+          </div>
+
+          <!-- SKILLS -->
+          <div class="resume-section">
+            <h2 class="resume-section-title">Skills</h2>
+            <ul class="resume-skills-list">
+              <li><strong>Programming Skills:</strong> Python, R, C++, Java, JavaScript, SQL, CSS, HTML</li>
+              <li><strong>Data Visualization:</strong> Tableau, Power BI, SAS, AWS QuickSight, SAP Business Intelligence, MATLAB</li>
+              <li><strong>Database Technology:</strong> PostgreSQL, MySQL, MongoDB, DynamoDB, Couchbase, Hadoop, Apache Spark, Data Warehousing, Data Lakes</li>
+              <li><strong>Machine Learning:</strong> Numpy, Pandas, Matplotlib, Pyspark, Seaborn, Scikit-learn, TensorFlow, Keras, Scipy, NLTK, SpaCy</li>
+              <li><strong>Other Technology:</strong> Git, AWS, Microsoft Azure, Google Cloud, Linux, OpenCV, Hadoop, Kafka, Stata, Spark, Jupyter Notebook, Docker, Airflow</li>
+              <li><strong>Other Skills:</strong> REST APIs, Data Preprocessing, ETL, Generative-AI, Large Language Models, Statistics - Regression, T-test, Chi-squared, ANOVA</li>
+            </ul>
+          </div>
+
+          <!-- WORK EXPERIENCE -->
+          <div class="resume-section">
+            <h2 class="resume-section-title">Work Experience</h2>
+            
+            <div class="resume-entry">
+              <div class="resume-row resume-row-bold">
+                <span>Utrecht It Consulting, Netherlands</span>
+                <span></span>
+              </div>
+              <div class="resume-row resume-row-sub">
+                <span class="resume-italic">Automation &amp; Integration Consultant | Automation and Integration, Machine Learning, API Integration &amp; Cost Optimization</span>
+                <span class="resume-date">Oct 2024 - Aug 2025</span>
+              </div>
+              <ul class="resume-bullets">
+                <li>Engineered custom SDK connectors leveraging Solace's pub/sub messaging model to decouple distributed data workflows</li>
+                <li>Improving real-time event processing throughput by 30%</li>
+                <li>Embedded custom AI agents using Workato's Agent Studio to orchestrate enterprise workflows with built-in governance and security</li>
+                <li>Automated end-to-end operational workflows using Python, eliminating bottlenecks and enabling teams to ship reliable systems faster</li>
+                <li>Designed fault-tolerant, scalable cloud integration solutions adopted across three production pipelines</li>
+              </ul>
+            </div>
+
+            <div class="resume-entry">
+              <div class="resume-row resume-row-bold">
+                <span>Micropro Solutions, Nagpur India</span>
+                <span></span>
+              </div>
+              <div class="resume-row resume-row-sub">
+                <span class="resume-italic">Artificial Intelligence Engineering Intern | Retrieval-Augmented Generation, Machine Learning, Data Analytics</span>
+                <span class="resume-date">Mar 2024 - Sep 2024</span>
+              </div>
+              <ul class="resume-bullets">
+                <li>Deployed a multimodal RAG pipeline combining Whisper transcription and frame captioning to enable natural language video search</li>
+                <li>Built query-time retrieval over Qdrant/FAISS with cross-encoder reranking, improving precision and relevance at scale</li>
+                <li>Instrumented distributed AI services with OpenTelemetry and containerized the full stack via Docker Compose for production reliability</li>
+                <li>Streamed live agent runs using Redis Pub/Sub and WebSockets, enabling real-time monitoring and deterministic offline replay</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- RESEARCH PAPER -->
+          <div class="resume-section">
+            <h2 class="resume-section-title">Research Paper</h2>
+            <div class="resume-entry">
+              <div class="resume-row resume-row-bold">
+                <span>Reviewing Advances in Food Image Recognition and Nutritional Assessment: Focus on YOLOv8 | Oral Presentation in IEEE Journal</span>
+                <a href="https://github.com/Krishr21" target="_blank" rel="noreferrer" class="resume-link">GitHub</a>
+              </div>
+              <div class="resume-row resume-row-sub">
+                <span class="resume-italic">Computer Science, Data Cleaning/Preprocessing, Data Augmentation, YOLOv8</span>
+                <span></span>
+              </div>
+              <ul class="resume-bullets">
+                <li>Co-authored a peer-reviewed research paper, benchmarking YOLOv8 against Faster R-CNN and SSD across speed and accuracy metrics</li>
+                <li>Built and evaluated custom Indian food dataset with varied lighting and resolution, achieving 82% recognition on a 1,000-image Indian food benchmark</li>
+                <li>Proposed an India-Food Dataset architecture with metadata on portion size and calorie content, addressing gaps in Food-101 and UEC-Food100</li>
+                <li>Analyzed 3D volume estimation techniques including stereo vision, GANs, and SfM</li>
+                <li>Identified scalable pathways for automating nutritional assessment in real-world dietary monitoring systems</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- PROJECTS -->
+          <div class="resume-section">
+            <h2 class="resume-section-title">Projects</h2>
+            
+            <div class="resume-entry">
+              <div class="resume-row resume-row-bold">
+                <span>VisionVault</span>
+              </div>
+              <div class="resume-row resume-row-sub">
+                <span class="resume-italic">Software Engineer | Retrieval-Augmented Generation, Async Backend Architecture, Vector Search, API Integration &amp; Cost Optimization</span>
+              </div>
+              <ul class="resume-bullets">
+                <li>Developed a multimodal RAG retrieval pipeline combining speech transcription and optional vision cues aligned into searchable chunks</li>
+                <li>Integrated LlamaIndex for optional RAG index construction and local LLM synthesis (Ollama) to enable “ask questions about the video” workflows</li>
+                <li>Built query-time retrieval logic supporting multiple vector backends and tuned tradeoffs for speed vs accuracy via environment-configurable knobs</li>
+                <li>Upgraded embedding quality and improved retrieval precision using cross-encoder reranking and dynamic result filtering for higher relevance</li>
+              </ul>
+            </div>
+
+            <div class="resume-entry">
+              <div class="resume-row resume-row-bold">
+                <span>OrchestrAI</span>
+              </div>
+              <div class="resume-row resume-row-sub">
+                <span class="resume-italic">Software Engineer | FastAPI, Postgres, Redis, Celery, Next.js, Docker</span>
+              </div>
+              <ul class="resume-bullets">
+                <li>Built a local-first agent observability platform to record agent runs step-by-step with persistent storage in Postgres and migrations via Alembic</li>
+                <li>Executed real-time run streaming using Redis Pub/Sub + WebSockets and added deterministic replay plus offline evaluation pipelines using Celery</li>
+                <li>Instrumented services with OpenTelemetry, packaged the stack with Docker Compose and integrated both local and hosted LLM execution paths</li>
+              </ul>
+            </div>
+
+            <div class="resume-entry">
+              <div class="resume-row resume-row-bold">
+                <span>CarWise-AI</span>
+              </div>
+              <div class="resume-row resume-row-sub">
+                <span class="resume-italic">Software Engineer | AI Search Grounding, Real-Time Web Integration, React, TypeScript, Google Gemini API</span>
+              </div>
+              <ul class="resume-bullets">
+                <li>Built a live-search powered car discovery assistant using Google Gemini's native Search Grounding to fetch real, verifiable listings in real-time</li>
+                <li>Integrated Gemini Flash to auto-generate AI-driven pros, cons, and summaries for each listing, replacing hallucinated results with grounded web data</li>
+                <li>Designed a side-by-side comparison grid surfacing mileage, price, location, and source links for data-driven purchase decisions</li>
+                <li>Engineered graceful error handling for incomplete real-world listing data, ensuring reliable UX across inconsistent marketplace sources</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- CERTIFICATION -->
+          <div class="resume-section">
+            <h2 class="resume-section-title">Certification</h2>
+            <ul class="resume-cert-list">
+              <li>Full Stack Web Development – Apna College(WDM)</li>
+              <li>Workato Automation Pro - I (WAP-01)</li>
+              <li>Workato Automation Pro – II (WAP-02)</li>
+              <li>Workato Automation Pro – III (WAP-03)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-notification" id="siteToast">
+    <span class="toast-icon">✓</span>
+    <span id="toastMsg">Action successful</span>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL: ⌘K INTERACTIVE ENGINEERING TERMINAL HUD
+       ========================================================================== -->
+  <div class="terminal-backdrop" id="terminalBackdrop" aria-hidden="true">
+    <div class="terminal-window" id="terminalWindow">
+      <div class="terminal-scanlines"></div>
+
+      <!-- Header Bar -->
+      <div class="terminal-header">
+        <div class="terminal-title-bar">
+          <div class="terminal-dots">
+            <span class="t-dot red"></span>
+            <span class="t-dot yellow"></span>
+            <span class="t-dot green"></span>
+          </div>
+          <span class="terminal-title">
+            <span>krish@portfolio-hud: ~ (zsh)</span>
+          </span>
+        </div>
+        <div class="terminal-header-actions">
+          <span class="terminal-badge">RAG / Observability CLI</span>
+          <button class="terminal-close-btn" id="closeTerminalBtn" aria-label="Close Terminal">✕ [Esc]</button>
+        </div>
+      </div>
+
+      <!-- Terminal Output Scrollback -->
+      <div class="terminal-body" id="terminalBody"></div>
+
+      <!-- Quick Command Chips -->
+      <div class="terminal-quick-chips">
+        <span style="font-size:0.68rem; color:var(--text-muted); align-self:center; margin-right:0.25rem;">Quick:</span>
+        <button class="term-chip" data-cmd="help">help</button>
+        <button class="term-chip" data-cmd="rag">rag --query</button>
+        <button class="term-chip" data-cmd="trace orchestrai">trace orchestrai</button>
+        <button class="term-chip" data-cmd="skills">skills</button>
+        <button class="term-chip" data-cmd="resume">resume</button>
+        <button class="term-chip" data-cmd="contact">contact</button>
+        <button class="term-chip" data-cmd="matrix">matrix</button>
+        <button class="term-chip" data-cmd="theme cyber">theme cyber</button>
+      </div>
+
+      <!-- Terminal Input Command Line -->
+      <div class="terminal-input-row">
+        <span class="terminal-prompt">krish@portfolio:~$</span>
+        <input type="text" class="terminal-input" id="terminalInput" placeholder="Type a command (e.g. 'rag', 'skills', 'trace', 'matrix', 'help')..." autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen Matrix Rain Canvas Overlay -->
+  <canvas class="matrix-canvas-overlay" id="matrixCanvasOverlay"></canvas>
+
+  <!-- Main JavaScript App -->
+  <script type="module" src="js/app.js?v=7.3"></script>
+</body>
+</html>

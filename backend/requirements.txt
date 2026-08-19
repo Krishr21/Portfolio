@@ -1,0 +1,6 @@
+livekit-agents[speechmatics,openai,silero]==1.4.2
+livekit-api>=0.8.0
+fastapi>=0.110.0
+uvicorn>=0.28.0
+python-dotenv>=1.0.0
+
