@@ -121,6 +121,118 @@ async def stream_speechmatics_tts(text: str, voice: str = "sarah"):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/chat")
+async def chat_endpoint(q: str):
+    """Answers any arbitrary conversational question using Free AI Models (Google Gemini 2.0 / Groq Llama 3.3) with grounding on Krish's portfolio."""
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+    
+    query = q.strip()
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    groq_key = os.getenv("GROQ_API_KEY")
+    openrouter_key = os.getenv("OPENROUTER_API_KEY")
+    openai_key = os.getenv("OPENAI_API_KEY")
+
+    # 1. Try Google Gemini Free API (15 RPM / 1,500 requests/day 100% Free)
+    if gemini_key:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}"
+            payload = {
+                "contents": [{
+                    "role": "user",
+                    "parts": [{"text": f"System Context:\n{KRISH_SYSTEM_PROMPT}\n\nUser Question: {query}\n\nRespond as K.R.I.S.H. in 1-3 conversational, natural sentences:"}]
+                }],
+                "generationConfig": {
+                    "maxOutputTokens": 200,
+                    "temperature": 0.6
+                }
+            }
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        return {"answer": text, "provider": "gemini-2.0-flash"}
+        except Exception as e:
+            print("Gemini chat notice:", e)
+
+    # 2. Try Groq Free API (Llama 3.3 70B Free Tier)
+    if groq_key:
+        try:
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+            payload = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": KRISH_SYSTEM_PROMPT},
+                    {"role": "user", "content": query}
+                ],
+                "max_tokens": 150,
+                "temperature": 0.6
+            }
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        text = data["choices"][0]["message"]["content"].strip()
+                        return {"answer": text, "provider": "groq-llama-3.3"}
+        except Exception as e:
+            print("Groq chat notice:", e)
+
+    # 3. Try OpenRouter Free API
+    if openrouter_key:
+        try:
+            url = "https://openrouter.ai/api/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {openrouter_key}", "Content-Type": "application/json"}
+            payload = {
+                "model": "meta-llama/llama-3.3-70b-instruct:free",
+                "messages": [
+                    {"role": "system", "content": KRISH_SYSTEM_PROMPT},
+                    {"role": "user", "content": query}
+                ],
+                "max_tokens": 150,
+                "temperature": 0.6
+            }
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        text = data["choices"][0]["message"]["content"].strip()
+                        return {"answer": text, "provider": "openrouter-free"}
+        except Exception as e:
+            print("OpenRouter chat notice:", e)
+
+    # 4. Try OpenAI if key configured
+    if openai_key:
+        try:
+            url = "https://api.openai.com/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"}
+            payload = {
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": KRISH_SYSTEM_PROMPT},
+                    {"role": "user", "content": query}
+                ],
+                "max_tokens": 150,
+                "temperature": 0.6
+            }
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        text = data["choices"][0]["message"]["content"].strip()
+                        return {"answer": text, "provider": "openai-gpt4o-mini"}
+        except Exception as e:
+            print("OpenAI chat notice:", e)
+
+    # 5. Built-in Dynamic Portfolio Knowledge Graph Fallback
+    fallback_text = (
+        f"Regarding '{query}': Krish Ruparel is an AI Engineer pursuing his MS CS at UT Arlington (3.84 GPA). "
+        f"He specializes in multimodal RAG pipelines (VisionVault), agent observability (OrchestrAI), "
+        f"and Solace distributed systems (+30% throughput). Feel free to explore his projects or resume!"
+    )
+    return {"answer": fallback_text, "provider": "krish-semantic-engine"}
+
 class KrishVoiceAgent(Agent):
     def __init__(self):
         super().__init__(

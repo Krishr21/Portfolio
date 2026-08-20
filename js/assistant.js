@@ -1126,17 +1126,56 @@ class ConversationalAssistant {
       ];
     }
 
-    // 17. INTELLIGENT FALLBACK SYNTHESIZER
+    // 17. FREE GENERATIVE AI INTELLIGENCE (Google Gemini 2.0 / Groq Llama 3.3 Free Tier)
     else {
       gesture = 'salute';
-      answerHtml = `💡 <em>"${rawQ}"</em><br><br>Krish Ruparel is an <strong>AI Engineer &amp; Distributed Systems Architect</strong> pursuing his MS CS at <strong>UT Arlington (3.84 GPA)</strong>. He specializes in <strong>multimodal RAG pipelines (VisionVault)</strong>, <strong>agent observability (OrchestrAI)</strong>, <strong>Solace event streaming (+30% throughput)</strong>, and published <strong>IEEE computer vision research</strong>.<br><br>What specific topic would you like to explore?`;
-      plainSpeech = `Regarding ${rawQ}: Krish Ruparel specializes in multimodal RAG pipelines, agent observability, high-throughput distributed systems, and published IEEE computer vision research. Here are some key areas to explore.`;
-      followUpChoices = [
-        { label: "⚡ Explore Featured Projects", target: "projects-intro", primary: true },
-        { label: "💼 Why Hire Krish?", target: "hire-intro" },
-        { label: "📜 View Full Resume", action: "open-resume-modal" },
-        { label: "⬅ Back to Start", target: "greeting" }
-      ];
+      if (this.avatar3D) this.avatar3D.playSalute();
+
+      // Show immediate intelligent thinking indicator
+      if (this.speechEl) {
+        this.speechEl.innerHTML = `🧠 <em class="typing-cursor">K.R.I.S.H. Synthesizing Answer...</em>`;
+      }
+      if (this.choicesEl) {
+        this.choicesEl.innerHTML = '';
+      }
+
+      const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
+
+      fetch(`${apiBase}/api/chat?q=${encodeURIComponent(rawQ)}`)
+        .then(res => res.json())
+        .then(data => {
+          const aiText = data.answer || `Regarding ${rawQ}: Krish Ruparel specializes in multimodal RAG pipelines, agent observability, and Solace distributed systems.`;
+          const formattedHtml = `💡 <strong>${rawQ}</strong><br><br>${aiText}`;
+          const followUps = [
+            { label: "⚡ Explore Featured Projects", target: "projects-intro", primary: true },
+            { label: "💼 Why Hire Krish?", target: "hire-intro" },
+            { label: "📜 View Full Resume", action: "open-resume-modal" },
+            { label: "⬅ Back to Start", target: "greeting" }
+          ];
+
+          this.typewrite(formattedHtml, () => {
+            this.renderChoices(followUps);
+          });
+
+          this.speakText(aiText, onSpoken);
+        })
+        .catch(err => {
+          console.warn('AI Chat fallback notice:', err);
+          const fallbackHtml = `💡 <em>"${rawQ}"</em><br><br>Krish Ruparel is an <strong>AI Engineer &amp; Distributed Systems Architect</strong> pursuing his MS CS at <strong>UT Arlington (3.84 GPA)</strong>. He specializes in <strong>multimodal RAG pipelines (VisionVault)</strong>, <strong>agent observability (OrchestrAI)</strong>, <strong>Solace event streaming (+30% throughput)</strong>, and published <strong>IEEE computer vision research</strong>.`;
+          const fallbackSpeech = `Regarding ${rawQ}: Krish Ruparel specializes in multimodal RAG pipelines, agent observability, high-throughput distributed systems, and published IEEE computer vision research.`;
+          
+          this.typewrite(fallbackHtml, () => {
+            this.renderChoices([
+              { label: "⚡ Explore Featured Projects", target: "projects-intro", primary: true },
+              { label: "💼 Why Hire Krish?", target: "hire-intro" },
+              { label: "📜 View Full Resume", action: "open-resume-modal" }
+            ]);
+          });
+
+          this.speakText(fallbackSpeech, onSpoken);
+        });
+
+      return;
     }
 
     // Trigger gesture
