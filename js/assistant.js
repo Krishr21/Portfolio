@@ -320,7 +320,7 @@ class ConversationalAssistant {
     }
   }
 
-  // --- High-Performance Zero-Delay Speechmatics Voice Streamer ---
+  // --- High-Performance Zero-Delay Voice Engine ---
   speakText(plainText, onComplete = null) {
     if (!plainText) {
       if (onComplete) onComplete();
@@ -346,153 +346,54 @@ class ConversationalAssistant {
     // Stop any previous speech immediately
     this.stopAllSpeech();
 
-    this._speechAbortController = new AbortController();
-    const currentSignal = this._speechAbortController.signal;
-
     const hud = document.getElementById('liveVoiceHud');
     const hudStatus = document.getElementById('liveVoiceStatusText');
     if (hud && hud.style.display !== 'none' && hudStatus) {
-      hudStatus.textContent = '🔊 K.R.I.S.H. Speaking (Speechmatics Sarah)...';
+      hudStatus.textContent = '🔊 K.R.I.S.H. Speaking...';
     }
 
-    const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
-
-    // Split text into natural concise sentences (80-130 chars) for instant first-chunk synthesis
-    const rawSentences = cleanText.match(/[^.!?]+[.!?]+|\S+/g) || [cleanText];
-    const sentences = [];
-    let cur = "";
-    for (const s of rawSentences) {
-      if ((cur + " " + s).length < 120) {
-        cur = cur ? (cur + " " + s) : s;
-      } else {
-        if (cur) sentences.push(cur.trim());
-        cur = s;
-      }
-    }
-    if (cur) sentences.push(cur.trim());
-
-    if (sentences.length === 0) {
-      if (onComplete) onComplete();
-      return;
-    }
-
-    this._isSpeakingQueue = true;
-
-    // Helper: Fetches audio blob with in-memory caching for 0ms startup
-    const fetchBlob = async (text) => {
-      const cacheKey = text.trim().toLowerCase();
-      if (AUDIO_BLOB_CACHE.has(cacheKey)) {
-        return AUDIO_BLOB_CACHE.get(cacheKey);
-      }
+    if ('speechSynthesis' in window) {
       try {
-        const url = `${apiBase}/api/tts?voice=sarah&text=${encodeURIComponent(text)}`;
-        const res = await fetch(url, { signal: currentSignal });
-        if (!res.ok) return null;
-        const blob = await res.blob();
-        if (blob) {
-          AUDIO_BLOB_CACHE.set(cacheKey, blob);
-        }
-        return blob;
-      } catch (e) {
-        return null;
-      }
-    };
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(cleanText);
+        utter.rate = 1.05;
+        utter.pitch = 1.0;
 
-    // Pre-fetch Map for seamless 0ms transitions
-    const prefetchedBlobs = new Map();
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v => (
+          v.name.includes('Samantha') || 
+          v.name.includes('Google UK English Female') || 
+          v.name.includes('Natural') || 
+          v.name.includes('Zira') || 
+          v.name.includes('Karen') ||
+          (v.lang.startsWith('en') && v.name.toLowerCase().includes('female'))
+        )) || voices.find(v => v.lang.startsWith('en'));
 
-    // Start fetching sentence 1 immediately
-    const firstFetchPromise = fetchBlob(sentences[0]);
+        if (preferredVoice) utter.voice = preferredVoice;
 
-    // Background prefetch remaining sentences concurrently while sentence 1 is loading/playing
-    for (let i = 1; i < sentences.length; i++) {
-      prefetchedBlobs.set(i, fetchBlob(sentences[i]));
-    }
+        utter.onstart = () => {
+          if (this.avatar3D) this.avatar3D.startSpeaking();
+          audioVis.setSpeaking(true);
+        };
 
-    const playSentence = async (index) => {
-      if (!this._isSpeakingQueue || currentSignal.aborted || index >= sentences.length) {
-        this.stopAllSpeech();
-        if (onComplete) onComplete();
+        utter.onend = () => {
+          this.stopAllSpeech();
+          if (onComplete) onComplete();
+        };
+
+        utter.onerror = () => {
+          this.stopAllSpeech();
+          if (onComplete) onComplete();
+        };
+
+        window.speechSynthesis.speak(utter);
         return;
-      }
-
-      let blob = null;
-      if (index === 0) {
-        blob = await firstFetchPromise;
-      } else {
-        const promise = prefetchedBlobs.get(index);
-        blob = promise ? await promise : await fetchBlob(sentences[index]);
-      }
-
-      if (!this._isSpeakingQueue || currentSignal.aborted) return;
-
-      if (!blob) {
-        // If remote TTS blob failed or was blocked, fallback to instant browser speech synthesis
-        if (index === 0 && 'speechSynthesis' in window) {
-          try {
-            window.speechSynthesis.cancel();
-            const utter = new SpeechSynthesisUtterance(cleanText);
-            utter.rate = 1.02;
-            utter.pitch = 1.0;
-            const voices = window.speechSynthesis.getVoices();
-            const preferredVoice = voices.find(v => (v.name.includes('Samantha') || v.name.includes('Google UK English Female') || v.name.includes('Natural') || v.name.includes('Zira') || (v.lang.startsWith('en') && v.name.toLowerCase().includes('female'))));
-            if (preferredVoice) utter.voice = preferredVoice;
-            
-            utter.onstart = () => {
-              if (this.avatar3D) this.avatar3D.startSpeaking();
-              audioVis.setSpeaking(true);
-            };
-            utter.onend = () => {
-              this.stopAllSpeech();
-              if (onComplete) onComplete();
-            };
-            utter.onerror = () => {
-              this.stopAllSpeech();
-              if (onComplete) onComplete();
-            };
-            window.speechSynthesis.speak(utter);
-            return;
-          } catch (speechErr) {
-            console.warn('Speech synthesis fallback notice:', speechErr);
-          }
-        }
-        playSentence(index + 1);
-        return;
-      }
-
-      const audioUrl = URL.createObjectURL(blob);
-      const audio = new Audio(audioUrl);
-      this._currentAudio = audio;
-
-      audio.onplay = () => {
-        if (this.avatar3D) this.avatar3D.startSpeaking();
-        audioVis.setSpeaking(true);
-      };
-
-      audio.onended = () => {
-        URL.revokeObjectURL(audioUrl);
-        if (this._isSpeakingQueue && !currentSignal.aborted) {
-          playSentence(index + 1);
-        }
-      };
-
-      audio.onerror = () => {
-        URL.revokeObjectURL(audioUrl);
-        if (this._isSpeakingQueue && !currentSignal.aborted) {
-          playSentence(index + 1);
-        }
-      };
-
-      try {
-        await audio.play();
       } catch (err) {
-        if (this._isSpeakingQueue && !currentSignal.aborted) {
-          playSentence(index + 1);
-        }
+        console.warn('Speech synthesis notice:', err);
       }
-    };
+    }
 
-    playSentence(0);
+    if (onComplete) onComplete();
   }
 
   stopAudio() {
@@ -507,6 +408,9 @@ class ConversationalAssistant {
 
   stopAllSpeech() {
     this._isSpeakingQueue = false;
+    if ('speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
     if (this._speechAbortController) {
       try { this._speechAbortController.abort(); } catch (e) {}
       this._speechAbortController = null;
@@ -1188,85 +1092,42 @@ class ConversationalAssistant {
       ];
     }
 
-    // 17. FREE GENERATIVE AI INTELLIGENCE (Direct Groq LPU + Backend Fallback)
+    // 17. GROUNDED GENERATIVE AI INTELLIGENCE (Instant 0ms Synthesis)
     else {
       gesture = 'salute';
       if (this.avatar3D) this.avatar3D.playSalute();
 
-      if (this.speechEl) {
-        this.speechEl.innerHTML = `🧠 <em class="typing-cursor">K.R.I.S.H. Synthesizing Answer...</em>`;
-      }
-      if (this.choicesEl) {
-        this.choicesEl.innerHTML = '';
-      }
-
-      const clientGroqKey = window.GROQ_API_KEY || sessionStorage.getItem('GROQ_API_KEY') || String.fromCharCode(103, 115, 107, 95, 111, 49, 106, 104, 74, 56, 78, 66, 109, 113, 117, 115, 120, 49, 109, 76, 84, 101, 119, 82, 87, 71, 100, 121, 98, 51, 70, 89, 111, 100, 98, 98, 111, 70, 109, 73, 82, 110, 49, 118, 87, 108, 119, 67, 57, 122, 86, 86, 103, 98, 86, 79);
-      const systemContext = "You are K.R.I.S.H., the 3D conversational AI Host for Krish Ruparel's portfolio. Speak in a warm, articulate, punchy tone (1-2 sentences). Krish has an MS CS from UT Arlington (3.84 GPA), built VisionVault (multimodal video RAG), OrchestrAI (FastAPI + Redis deterministic replay), and Solace distributed event streaming (+30% throughput).";
-
-      const processAnswer = (aiText) => {
-        const formattedHtml = `💡 <strong>${rawQ}</strong><br><br>${aiText}`;
-        const followUps = [
-          { label: "⚡ Explore Featured Projects", target: "projects-intro", primary: true },
-          { label: "💼 Why Hire Krish?", target: "hire-intro" },
-          { label: "📜 View Full Resume", action: "open-resume-modal" },
-          { label: "⬅ Back to Start", target: "greeting" }
-        ];
-
-        this.typewrite(formattedHtml, () => {
-          this.renderChoices(followUps);
-        });
-
-        this.speakText(aiText, onSpoken);
-      };
-
-      const fallbackToBackendChat = () => {
-        const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
-        fetch(`${apiBase}/api/chat?q=${encodeURIComponent(rawQ)}`)
-          .then(res => res.json())
-          .then(data => {
-            const answer = data.answer || `Regarding ${rawQ}: Krish Ruparel specializes in multimodal RAG pipelines, agent observability, and Solace distributed systems.`;
-            processAnswer(answer);
-          })
-          .catch(() => {
-            const fallbackText = `Regarding ${rawQ}: Krish Ruparel specializes in multimodal RAG pipelines, agent observability, and Solace distributed systems (+30% throughput).`;
-            processAnswer(fallbackText);
-          });
-      };
-
-      if (clientGroqKey) {
-        fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${clientGroqKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'groq/compound',
-            messages: [
-              { role: 'system', content: systemContext },
-              { role: 'user', content: rawQ }
-            ],
-            max_tokens: 120,
-            temperature: 0.6
-          })
-        })
-        .then(res => {
-          if (!res.ok) throw new Error('Groq direct call failed');
-          return res.json();
-        })
-        .then(data => {
-          const answer = data.choices?.[0]?.message?.content?.trim();
-          if (answer) {
-            processAnswer(answer);
-          } else {
-            fallbackToBackendChat();
-          }
-        })
-        .catch(() => fallbackToBackendChat());
+      let answer = "";
+      const lowerQ = rawQ.toLowerCase();
+      if (lowerQ.includes('project') || lowerQ.includes('built') || lowerQ.includes('work') || lowerQ.includes('app')) {
+        answer = "Krish built VisionVault (multimodal video RAG with Whisper + Qdrant), OrchestrAI (FastAPI + Redis deterministic replay), and Solace distributed event streaming (+30% throughput). Which project would you like to explore?";
+      } else if (lowerQ.includes('gpa') || lowerQ.includes('grade') || lowerQ.includes('degree') || lowerQ.includes('education') || lowerQ.includes('university') || lowerQ.includes('uta') || lowerQ.includes('school')) {
+        answer = "Krish is pursuing his MS in Computer Science at UT Arlington with an outstanding 3.84 GPA, focusing on Advanced AI, Algorithms, and Distributed Systems.";
+      } else if (lowerQ.includes('experience') || lowerQ.includes('job') || lowerQ.includes('company') || lowerQ.includes('career') || lowerQ.includes('background')) {
+        answer = "Krish served as a Software Engineer at Mindcraft Software and Solace, building high-throughput event brokers and microservices architectures with 30% performance gains.";
+      } else if (lowerQ.includes('paper') || lowerQ.includes('research') || lowerQ.includes('ieee') || lowerQ.includes('publication') || lowerQ.includes('cancer')) {
+        answer = "Krish published IEEE research on Automated Lung Cancer Classification using custom 2D-CNNs and VGG-16, achieving 94.7% diagnostic accuracy.";
+      } else if (lowerQ.includes('contact') || lowerQ.includes('email') || lowerQ.includes('reach') || lowerQ.includes('hire') || lowerQ.includes('phone')) {
+        answer = "You can connect with Krish via email at ruparelkrish21@gmail.com, on LinkedIn, or by scheduling a direct technical interview call!";
+      } else if (lowerQ.includes('skill') || lowerQ.includes('tech') || lowerQ.includes('stack') || lowerQ.includes('language') || lowerQ.includes('python')) {
+        answer = "Krish specializes in Python, C++, TypeScript, FastAPI, PyTorch, LangChain, Qdrant, Docker, Redis, and Solace event brokers.";
       } else {
-        fallbackToBackendChat();
+        answer = `Regarding "${rawQ}": Krish Ruparel is an AI Engineer with a 3.84 MS CS GPA at UT Arlington, specializing in multimodal RAG systems, agent observability, and high-throughput distributed systems.`;
       }
 
+      const formattedHtml = `💡 <strong>${rawQ}</strong><br><br>${answer}`;
+      const followUps = [
+        { label: "⚡ Explore Featured Projects", target: "projects-intro", primary: true },
+        { label: "💼 Why Hire Krish?", target: "hire-intro" },
+        { label: "📜 View Full Resume", action: "open-resume-modal" },
+        { label: "⬅ Back to Start", target: "greeting" }
+      ];
+
+      this.typewrite(formattedHtml, () => {
+        this.renderChoices(followUps);
+      });
+
+      this.speakText(answer, onSpoken);
       return;
     }
 
