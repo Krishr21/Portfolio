@@ -527,111 +527,123 @@ class ConversationalAssistant {
       }
     };
 
-    // Real-time audio VU meter & Adaptive Acoustic Noise Gate with Dual-Engine STT
+    // Real-time audio VU meter & Robust Whisper Voice Capture Architecture
     let voiceEnergyDetected = false;
     let audioChunks = [];
     let mediaRecorder = null;
     let isTranscribingAudio = false;
-    const NOISE_GATE_THRESHOLD = 0.006; // Highly sensitive to natural speaking voice, ignores zero-sound silence
+    const NOISE_GATE_THRESHOLD = 0.005; // Sensitive to natural speaking voice
 
     const startAudioRecording = (stream) => {
       try {
+        if (!window.MediaRecorder || !stream) return;
         audioChunks = [];
-        const mimeType = window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
           ? 'audio/webm;codecs=opus'
-          : (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm');
+          : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm');
         
-        if (window.MediaRecorder) {
-          mediaRecorder = new MediaRecorder(stream, { mimeType });
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) {
-              audioChunks.push(e.data);
-            }
-          };
-          mediaRecorder.start(100);
-        }
+        mediaRecorder = new MediaRecorder(stream, { mimeType });
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            audioChunks.push(e.data);
+          }
+        };
+        mediaRecorder.start(100);
       } catch (e) {
         console.warn('MediaRecorder notice:', e);
       }
     };
 
-    const sendAudioForWhisperSTT = async () => {
-      if (isTranscribingAudio || this.isSpeaking || !audioChunks || audioChunks.length === 0) return;
+    const stopAndTranscribeAudio = () => {
+      if (isTranscribingAudio || this.isSpeaking || !mediaRecorder || mediaRecorder.state === 'inactive') return;
+      
       try {
         isTranscribingAudio = true;
-        const currentMime = mediaRecorder?.mimeType || 'audio/webm';
-        const audioBlob = new Blob(audioChunks, { type: currentMime });
-        audioChunks = [];
+        const currentMime = mediaRecorder.mimeType || 'audio/webm';
         
-        if (audioBlob.size < 400) {
-          isTranscribingAudio = false;
-          return;
-        }
-
-        updateHud('thinking', '🧠 Whisper Transcribing Voice...');
-
-        let spokenText = '';
-        const clientGroqKey = window.GROQ_API_KEY || sessionStorage.getItem('GROQ_API_KEY') || "";
-
-        // 1. If client key provided, call Groq Whisper API directly
-        if (clientGroqKey) {
-          try {
-            const directForm = new FormData();
-            const ext = currentMime.includes('mp4') ? 'mp4' : 'webm';
-            directForm.append('file', audioBlob, `voice.${ext}`);
-            directForm.append('model', 'whisper-large-v3-turbo');
-            directForm.append('language', 'en');
-
-            const directRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${clientGroqKey}` },
-              body: directForm
-            });
-
-            if (directRes.ok) {
-              const directData = await directRes.json();
-              spokenText = directData.text?.trim() || '';
-            }
-          } catch (directErr) {
-            console.warn('Direct Groq Whisper notice:', directErr);
-          }
-        }
-
-        // 2. Direct binary POST to Render /api/stt
-        if (!spokenText) {
-          try {
-            const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
-
-            const res = await fetch(`${apiBase}/api/stt`, {
-              method: 'POST',
-              headers: { 'Content-Type': currentMime },
-              body: audioBlob
-            });
-            
-            if (res.ok) {
-              const data = await res.json();
-              spokenText = data.text?.trim() || '';
-            }
-          } catch (backendErr) {
-            console.warn('Backend STT notice:', backendErr);
-          }
-        }
-
-        if (spokenText && spokenText.length > 1 && !spokenText.toLowerCase().includes('thank you.')) {
-          if (this.queryInput) this.queryInput.value = spokenText;
-          updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
-          this.handleUserQuestion(spokenText, () => {
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunks, { type: currentMime });
+          audioChunks = [];
+          
+          if (audioBlob.size < 400) {
             isTranscribingAudio = false;
-            if (this.isLiveVoiceMode && !this.isSpeaking) {
-              if (this.queryInput) this.queryInput.value = '';
-              if (this.micStream) startAudioRecording(this.micStream);
+            if (this.isLiveVoiceMode && !this.isSpeaking && this.micStream) {
+              startAudioRecording(this.micStream);
             }
-          });
-          return;
-        }
+            return;
+          }
+
+          updateHud('thinking', '🧠 Whisper Transcribing Voice...');
+
+          let spokenText = '';
+          const clientGroqKey = window.GROQ_API_KEY || sessionStorage.getItem('GROQ_API_KEY') || "";
+
+          // 1. Direct Client Call to Groq Whisper
+          if (clientGroqKey) {
+            try {
+              const directForm = new FormData();
+              const ext = currentMime.includes('mp4') ? 'mp4' : 'webm';
+              directForm.append('file', audioBlob, `voice.${ext}`);
+              directForm.append('model', 'whisper-large-v3-turbo');
+              directForm.append('language', 'en');
+
+              const directRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${clientGroqKey}` },
+                body: directForm
+              });
+
+              if (directRes.ok) {
+                const directData = await directRes.json();
+                spokenText = directData.text?.trim() || '';
+              }
+            } catch (directErr) {
+              console.warn('Direct Groq Whisper notice:', directErr);
+            }
+          }
+
+          // 2. Direct binary POST to Render /api/stt
+          if (!spokenText) {
+            try {
+              const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
+
+              const res = await fetch(`${apiBase}/api/stt`, {
+                method: 'POST',
+                headers: { 'Content-Type': currentMime },
+                body: audioBlob
+              });
+              
+              if (res.ok) {
+                const data = await res.json();
+                spokenText = data.text?.trim() || '';
+              }
+            } catch (backendErr) {
+              console.warn('Backend STT notice:', backendErr);
+            }
+          }
+
+          if (spokenText && spokenText.length > 1 && !spokenText.toLowerCase().includes('thank you.')) {
+            if (this.queryInput) this.queryInput.value = spokenText;
+            updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
+            this.handleUserQuestion(spokenText, () => {
+              isTranscribingAudio = false;
+              if (this.isLiveVoiceMode && !this.isSpeaking && this.micStream) {
+                if (this.queryInput) this.queryInput.value = '';
+                startAudioRecording(this.micStream);
+              }
+            });
+          } else {
+            isTranscribingAudio = false;
+            if (this.isLiveVoiceMode && !this.isSpeaking && this.micStream) {
+              startAudioRecording(this.micStream);
+            }
+          }
+        };
+
+        // Stop the recorder to cleanly finalize audio container & flush chunks
+        mediaRecorder.stop();
       } catch (err) {
         console.warn('Whisper STT processing notice:', err);
-      } finally {
         isTranscribingAudio = false;
       }
     };
@@ -678,13 +690,13 @@ class ConversationalAssistant {
             updateHud('listening', '🎙️ Voice Detected: Listening...');
           } else if (voiceEnergyDetected) {
             silenceCount++;
-            // When voice stops for ~300ms, immediately trigger Whisper transcription
+            // When voice stops for ~300ms, immediately finalize recording and transcribe
             if (silenceCount > 16 && !isTranscribingAudio && !this.isSpeaking) {
               voiceEnergyDetected = false;
               silenceCount = 0;
               const currentInput = this.queryInput ? this.queryInput.value.trim() : '';
               if (!currentInput || currentInput.length < 2) {
-                sendAudioForWhisperSTT();
+                stopAndTranscribeAudio();
               }
             }
           }
@@ -821,7 +833,7 @@ class ConversationalAssistant {
             hasNetworkError = true;
             // Browser Web Speech API network drop: seamlessly capture audio via Whisper STT
             if (voiceEnergyDetected) {
-              sendAudioForWhisperSTT();
+              stopAndTranscribeAudio();
             }
             return;
           }
@@ -856,7 +868,7 @@ class ConversationalAssistant {
                 }
               });
             } else {
-              sendAudioForWhisperSTT();
+              stopAndTranscribeAudio();
             }
           }
         };
@@ -918,10 +930,8 @@ class ConversationalAssistant {
         }
 
         if (this.isListening || this.isLiveVoiceMode) {
-          // If speech was recorded during this session, transcribe it immediately
-          if (audioChunks && audioChunks.length > 0) {
-            sendAudioForWhisperSTT();
-          }
+          // If speech was recorded during this session, finalize & transcribe it
+          stopAndTranscribeAudio();
           this.isLiveVoiceMode = false;
           this.isListening = false;
           if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
