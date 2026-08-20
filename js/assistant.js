@@ -271,7 +271,7 @@ class ConversationalAssistant {
 
   // --- Neural Studio High-Fidelity Female Voice Synthesizer ---
   // --- Exclusive Speechmatics Studio Neural Female Voice Synthesizer ---
-  // --- Real-Time Voice Synthesizer & Speech Engine ---
+  // --- Realistic Human Voice Synthesizer (Speechmatics Neural Voice "sarah") ---
   speakText(plainText, onComplete = null) {
     if (!plainText) {
       if (onComplete) onComplete();
@@ -297,7 +297,7 @@ class ConversationalAssistant {
     // Stop any currently playing audio
     this.stopAllSpeech();
 
-    // Fallback: Web Speech Synthesis (natural browser voice with 0ms latency)
+    // Fallback: Web Speech Synthesis (natural browser voice)
     const fallbackWebSpeech = () => {
       if (!('speechSynthesis' in window)) {
         this._isSpeakingQueue = false;
@@ -309,13 +309,13 @@ class ConversationalAssistant {
       try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.rate = 1.05;
-        utterance.pitch = 1.05;
+        utterance.rate = 1.02;
+        utterance.pitch = 1.04;
 
         // Select the most natural female/English voice available
         const voices = window.speechSynthesis.getVoices();
         const preferredVoice = voices.find(v => 
-          (v.name.includes('Samantha') || v.name.includes('Victoria') || v.name.includes('Karen') || v.name.includes('Google US English') || v.name.includes('Zira') || v.name.includes('Female')) && v.lang.startsWith('en')
+          (v.name.includes('Samantha') || v.name.includes('Victoria') || v.name.includes('Karen') || v.name.includes('Google US English') || v.name.includes('Zira') || v.name.includes('Natural') || v.name.includes('Female')) && v.lang.startsWith('en')
         ) || voices.find(v => v.lang.startsWith('en'));
         if (preferredVoice) utterance.voice = preferredVoice;
 
@@ -346,8 +346,84 @@ class ConversationalAssistant {
       }
     };
 
-    // Instant zero-latency synthesis via WebSpeech
-    fallbackWebSpeech();
+    // Split text into natural sentence chunks (max 130 chars each) for Speechmatics
+    const rawChunks = cleanText.match(/[^.!?]+[.!?]+|\S+/g) || [cleanText];
+    const sentenceChunks = [];
+    let currentChunk = "";
+
+    for (const chunk of rawChunks) {
+      if ((currentChunk + " " + chunk).length < 130) {
+        currentChunk = currentChunk ? (currentChunk + " " + chunk) : chunk;
+      } else {
+        if (currentChunk) sentenceChunks.push(currentChunk.trim());
+        currentChunk = chunk;
+      }
+    }
+    if (currentChunk) sentenceChunks.push(currentChunk.trim());
+
+    if (sentenceChunks.length === 0) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    // Realistic Speechmatics Neural Voice Audio Queue
+    let currentIdx = 0;
+    this._isSpeakingQueue = true;
+
+    const playNextChunk = () => {
+      if (!this._isSpeakingQueue || currentIdx >= sentenceChunks.length) {
+        this._isSpeakingQueue = false;
+        if (this.avatar3D) this.avatar3D.stopSpeaking();
+        audioVis.setSpeaking(false);
+        this._currentAudio = null;
+        if (onComplete) onComplete();
+        return;
+      }
+
+      const chunkText = sentenceChunks[currentIdx];
+      currentIdx++;
+
+      try {
+        const speechmaticsUrl = `${API_BASE}/api/tts?voice=sarah&text=${encodeURIComponent(chunkText)}`;
+        const audio = new Audio(speechmaticsUrl);
+        this._currentAudio = audio;
+
+        // Preload next chunk in background for seamless zero-gap playback
+        if (currentIdx < sentenceChunks.length) {
+          const nextSmUrl = `${API_BASE}/api/tts?voice=sarah&text=${encodeURIComponent(sentenceChunks[currentIdx])}`;
+          const preloadAudio = new Audio(nextSmUrl);
+          preloadAudio.preload = 'auto';
+        }
+
+        audio.onplay = () => {
+          if (this.avatar3D) this.avatar3D.startSpeaking();
+          audioVis.setSpeaking(true);
+        };
+
+        audio.onended = () => {
+          playNextChunk();
+        };
+
+        audio.onerror = () => {
+          // If Speechmatics fails, fallback to natural Web Speech API
+          this._isSpeakingQueue = false;
+          fallbackWebSpeech();
+        };
+
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            this._isSpeakingQueue = false;
+            fallbackWebSpeech();
+          });
+        }
+      } catch (e) {
+        this._isSpeakingQueue = false;
+        fallbackWebSpeech();
+      }
+    };
+
+    playNextChunk();
   }
 
   stopAudio() {
