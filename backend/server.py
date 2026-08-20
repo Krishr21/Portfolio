@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / ".env.local"
 load_dotenv(dotenv_path=env_path)
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from livekit import api
 from livekit import agents
@@ -236,6 +236,35 @@ async def chat_endpoint(q: str):
         f"and Solace distributed systems (+30% throughput). Feel free to explore his projects or resume!"
     )
     return {"answer": fallback_text, "provider": "krish-semantic-engine"}
+
+@app.post("/api/stt")
+async def speech_to_text_endpoint(file: UploadFile = File(...)):
+    """Transcribes audio using Groq Whisper Large v3 Turbo (sub-150ms) or Speechmatics STT."""
+    audio_bytes = await file.read()
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="Empty audio file")
+
+    groq_key = os.getenv("GROQ_API_KEY")
+
+    # 1. Try Groq Whisper Large v3 Turbo (High speed, noise-resilient STT)
+    if groq_key:
+        try:
+            headers = {"Authorization": f"Bearer {groq_key}"}
+            data = aiohttp.FormData()
+            data.add_field("file", audio_bytes, filename=file.filename or "audio.webm", content_type=file.content_type or "audio/webm")
+            data.add_field("model", "whisper-large-v3-turbo")
+            data.add_field("language", "en")
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.post("https://api.groq.com/openai/v1/audio/transcriptions", data=data, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                    if resp.status == 200:
+                        res_json = await resp.json()
+                        text = res_json.get("text", "").strip()
+                        return {"text": text, "provider": "groq-whisper-v3-turbo"}
+        except Exception as e:
+            print("Groq Whisper STT notice:", e)
+
+    return {"text": "", "error": "STT service unavailable"}
 
 class KrishVoiceAgent(Agent):
     def __init__(self):

@@ -527,9 +527,78 @@ class ConversationalAssistant {
       }
     };
 
-    // Real-time audio VU meter & Adaptive Acoustic Noise Gate
+    // Real-time audio VU meter & Adaptive Acoustic Noise Gate with Dual-Engine STT
     let voiceEnergyDetected = false;
-    const NOISE_GATE_THRESHOLD = 0.032; // Filters out ambient room noise, fan hum & distant murmur
+    let audioChunks = [];
+    let mediaRecorder = null;
+    let isTranscribingAudio = false;
+    const NOISE_GATE_THRESHOLD = 0.028; // Filters out ambient room noise, fan hum & background chatter
+
+    const startAudioRecording = (stream) => {
+      try {
+        audioChunks = [];
+        const mimeType = window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm');
+        
+        if (window.MediaRecorder) {
+          mediaRecorder = new MediaRecorder(stream, { mimeType });
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+              audioChunks.push(e.data);
+            }
+          };
+          mediaRecorder.start(100);
+        }
+      } catch (e) {
+        console.warn('MediaRecorder notice:', e);
+      }
+    };
+
+    const sendAudioForWhisperSTT = async () => {
+      if (isTranscribingAudio || this.isSpeaking || !audioChunks || audioChunks.length === 0) return;
+      try {
+        isTranscribingAudio = true;
+        const audioBlob = new Blob(audioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
+        audioChunks = [];
+        
+        if (audioBlob.size < 2500) {
+          isTranscribingAudio = false;
+          return; // Too short / ambient murmur
+        }
+
+        const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
+        
+        const formData = new FormData();
+        formData.append('file', audioBlob, 'voice.webm');
+
+        updateHud('thinking', '🧠 Whisper Transcribing Voice...');
+        const res = await fetch(`${apiBase}/api/stt`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          const spokenText = data.text?.trim();
+          if (spokenText && spokenText.length > 1 && !spokenText.toLowerCase().includes('thank you.')) {
+            if (this.queryInput) this.queryInput.value = spokenText;
+            this.handleUserQuestion(spokenText, () => {
+              isTranscribingAudio = false;
+              if (this.isLiveVoiceMode && !this.isSpeaking) {
+                if (this.queryInput) this.queryInput.value = '';
+                if (this.micStream) startAudioRecording(this.micStream);
+              }
+            });
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Whisper STT request notice:', err);
+      } finally {
+        isTranscribingAudio = false;
+      }
+    };
 
     const startMicAnalyser = (stream) => {
       try {
@@ -548,9 +617,12 @@ class ConversationalAssistant {
         this.micAnalyser.smoothingTimeConstant = 0.35;
         source.connect(this.micAnalyser);
 
+        startAudioRecording(stream);
+
         const vuBars = document.querySelectorAll('.live-voice-bars span');
         const timeData = new Uint8Array(this.micAnalyser.fftSize);
         const freqData = new Uint8Array(this.micAnalyser.frequencyBinCount);
+        let silenceCount = 0;
 
         const renderVu = () => {
           if (!this.isListening || !this.micAnalyser) return;
@@ -566,6 +638,18 @@ class ConversationalAssistant {
           
           if (rms > NOISE_GATE_THRESHOLD) {
             voiceEnergyDetected = true;
+            silenceCount = 0;
+          } else if (voiceEnergyDetected) {
+            silenceCount++;
+            // When voice stops for ~450ms, trigger Whisper transcription if browser STT hasn't fired
+            if (silenceCount > 28 && !isTranscribingAudio && !this.isSpeaking) {
+              voiceEnergyDetected = false;
+              silenceCount = 0;
+              const currentInput = this.queryInput ? this.queryInput.value.trim() : '';
+              if (!currentInput || currentInput.length < 2) {
+                sendAudioForWhisperSTT();
+              }
+            }
           }
 
           // 2. Animate VU Bars
@@ -590,6 +674,11 @@ class ConversationalAssistant {
         cancelAnimationFrame(this.micAnimFrame);
         this.micAnimFrame = null;
       }
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try { mediaRecorder.stop(); } catch (e) {}
+      }
+      mediaRecorder = null;
+      audioChunks = [];
       if (this.micAudioContext) {
         try { this.micAudioContext.close(); } catch (e) {}
         this.micAudioContext = null;
@@ -703,27 +792,30 @@ class ConversationalAssistant {
             return;
           }
 
-          // On network or other transient error, if we have text, process it
-          if (!processedThisTurn && recognizedText.trim().length > 1) {
+          // On network or other transient error, fallback to Whisper STT audio buffer
+          if (!processedThisTurn) {
             processedThisTurn = true;
             const queryToRun = (this.queryInput ? this.queryInput.value : recognizedText).trim();
-            updateHud('thinking', '🧠 Processing Spoken Question...');
-            this.handleUserQuestion(queryToRun, () => {
-              if (this.isLiveVoiceMode && !this.isSpeaking) {
-                if (this.queryInput) this.queryInput.value = '';
-                setTimeout(() => {
-                  if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
-                    try { sr.start(); } catch (err) {}
-                  }
-                }, 250);
-              }
-            });
+            if (queryToRun.length > 1) {
+              updateHud('thinking', '🧠 Processing Spoken Question...');
+              this.handleUserQuestion(queryToRun, () => {
+                if (this.isLiveVoiceMode && !this.isSpeaking) {
+                  if (this.queryInput) this.queryInput.value = '';
+                  setTimeout(() => {
+                    if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
+                      try { sr.start(); } catch (err) {}
+                    }
+                  }, 250);
+                }
+              });
+            } else {
+              sendAudioForWhisperSTT();
+            }
           }
         };
 
         sr.onend = () => {
           this.isListening = false;
-          // If ended naturally and we have an unprocessed query
           if (!processedThisTurn && recognizedText.trim().length > 1) {
             processedThisTurn = true;
             const queryToRun = (this.queryInput ? this.queryInput.value : recognizedText).trim();
@@ -741,7 +833,6 @@ class ConversationalAssistant {
             return;
           }
 
-          // If Live Voice mode is active and no speech was detected, seamlessly restart
           if (this.isLiveVoiceMode && !this.isSpeaking) {
             setTimeout(() => {
               if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
@@ -798,7 +889,7 @@ class ConversationalAssistant {
           if (this.micBtn) this.micBtn.classList.add('recording');
           updateHud('listening', '🎙️ Live Voice: Listening (Noise Suppression Active)...');
 
-          // Initialize hardware DSP stream
+          // Initialize hardware DSP stream & Whisper recorder
           try {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
               this.micStream = await navigator.mediaDevices.getUserMedia({
