@@ -267,10 +267,6 @@ class ConversationalAssistant {
       const plain = this.speechEl.innerText || this.speechEl.textContent;
       if (plain) this.speakText(plain);
     }
-  }
-
-  // --- Neural Studio High-Fidelity Female Voice Synthesizer ---
-  // --- Exclusive Speechmatics Studio Neural Female Voice Synthesizer ---
   // --- Realistic Human Voice Synthesizer (Speechmatics Neural Studio Voice "sarah") ---
   async speakText(plainText, onComplete = null) {
     if (!plainText) {
@@ -294,8 +290,12 @@ class ConversationalAssistant {
       return;
     }
 
-    // Stop any currently playing audio
+    // Stop any currently playing audio immediately to prevent duplicate voices
     this.stopAllSpeech();
+
+    // Create a new AbortController so any prior/cancelled requests terminate
+    this._speechAbortController = new AbortController();
+    const currentSignal = this._speechAbortController.signal;
 
     const hud = document.getElementById('liveVoiceHud');
     const hudStatus = document.getElementById('liveVoiceStatusText');
@@ -309,80 +309,49 @@ class ConversationalAssistant {
 
     const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
 
-    // Split text into natural concise sentences (max 180 chars) for fast streaming synthesis
-    const rawChunks = cleanText.match(/[^.!?]+[.!?]+|\S+/g) || [cleanText];
-    const sentenceChunks = [];
-    let currentChunk = "";
-
-    for (const chunk of rawChunks) {
-      if ((currentChunk + " " + chunk).length < 180) {
-        currentChunk = currentChunk ? (currentChunk + " " + chunk) : chunk;
-      } else {
-        if (currentChunk) sentenceChunks.push(currentChunk.trim());
-        currentChunk = chunk;
-      }
-    }
-    if (currentChunk) sentenceChunks.push(currentChunk.trim());
-
-    if (sentenceChunks.length === 0) {
-      if (onComplete) onComplete();
-      return;
-    }
+    // Clean string trimmed to max 350 characters to keep response snappy and single-track
+    const utteranceText = cleanText.length > 350 ? cleanText.slice(0, 350).replace(/\s+\S*$/, '...') : cleanText;
 
     this._isSpeakingQueue = true;
-    let currentIdx = 0;
 
-    const playNext = async () => {
-      if (!this._isSpeakingQueue || currentIdx >= sentenceChunks.length) {
-        this._isSpeakingQueue = false;
-        if (this.avatar3D) this.avatar3D.stopSpeaking();
-        audioVis.setSpeaking(false);
-        this._currentAudio = null;
+    try {
+      const speechmaticsUrl = `${apiBase}/api/tts?voice=sarah&text=${encodeURIComponent(utteranceText)}`;
+      
+      const res = await fetch(speechmaticsUrl, { signal: currentSignal });
+      if (!res.ok) throw new Error(`Speechmatics HTTP ${res.status}`);
+      const blob = await res.blob();
+      if (!this._isSpeakingQueue || currentSignal.aborted) return;
+
+      const audioBlobUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioBlobUrl);
+      this._currentAudio = audio;
+
+      audio.onplay = () => {
+        if (this.avatar3D) this.avatar3D.startSpeaking();
+        audioVis.setSpeaking(true);
+      };
+
+      audio.onended = () => {
+        URL.revokeObjectURL(audioBlobUrl);
+        this.stopAllSpeech();
         if (onComplete) onComplete();
-        return;
-      }
+      };
 
-      const textToSpeak = sentenceChunks[currentIdx];
-      currentIdx++;
+      audio.onerror = (err) => {
+        console.warn('Speechmatics playback notice:', err);
+        URL.revokeObjectURL(audioBlobUrl);
+        this.stopAllSpeech();
+        if (onComplete) onComplete();
+      };
 
-      try {
-        const speechmaticsUrl = `${apiBase}/api/tts?voice=sarah&text=${encodeURIComponent(textToSpeak)}`;
-        
-        // Fetch audio directly as blob to prevent streaming network cutoffs
-        const res = await fetch(speechmaticsUrl);
-        if (!res.ok) throw new Error(`Speechmatics HTTP ${res.status}`);
-        const blob = await res.blob();
-        if (!this._isSpeakingQueue) return; // Barge-in interrupted
-
-        const audioBlobUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioBlobUrl);
-        this._currentAudio = audio;
-
-        audio.onplay = () => {
-          if (this.avatar3D) this.avatar3D.startSpeaking();
-          audioVis.setSpeaking(true);
-        };
-
-        audio.onended = () => {
-          URL.revokeObjectURL(audioBlobUrl);
-          playNext();
-        };
-
-        audio.onerror = (err) => {
-          console.warn('Speechmatics playback notice:', err);
-          URL.revokeObjectURL(audioBlobUrl);
-          playNext();
-        };
-
-        await audio.play();
-      } catch (err) {
+      await audio.play();
+    } catch (err) {
+      if (err.name !== 'AbortError') {
         console.warn('Speechmatics synthesis error:', err);
-        if (!this._isSpeakingQueue) return;
-        playNext();
       }
-    };
-
-    playNext();
+      this.stopAllSpeech();
+      if (onComplete) onComplete();
+    }
   }
 
   stopAudio() {
@@ -397,10 +366,15 @@ class ConversationalAssistant {
 
   stopAllSpeech() {
     this._isSpeakingQueue = false;
+    if (this._speechAbortController) {
+      try { this._speechAbortController.abort(); } catch (e) {}
+      this._speechAbortController = null;
+    }
     if (this._currentAudio) {
       try {
         this._currentAudio.pause();
         this._currentAudio.currentTime = 0;
+        this._currentAudio.src = '';
       } catch (e) {}
       this._currentAudio = null;
     }
@@ -1093,12 +1067,6 @@ class ConversationalAssistant {
     this.typewrite(dialogText, () => {
       this.renderChoices(step.choices, step.form);
     });
-
-    // Voice vocalization if audio enabled
-    if (audioVis.soundEnabled) {
-      const plain = dialogText.replace(/<[^>]*>?/gm, '');
-      this.speakText(plain);
-    }
   }
 
   typewrite(htmlContent, callback) {

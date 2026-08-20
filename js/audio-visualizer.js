@@ -77,9 +77,6 @@ class AudioVisualizerEngine {
         if (label) label.textContent = 'Audio: ON';
         this.playChime();
         window.showToast?.('🔊 Voice & Audio Enabled');
-        if (window.assistantEngine) {
-          window.assistantEngine.speakCurrentDialogue();
-        }
       } else {
         toggleBtn.classList.remove('sound-on');
         if (label) label.textContent = 'Audio: OFF';
