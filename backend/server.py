@@ -7,6 +7,7 @@ Provides:
 """
 
 import os
+import re
 import uuid
 import asyncio
 from pathlib import Path
@@ -156,28 +157,31 @@ async def chat_endpoint(q: str):
         except Exception as e:
             print("Gemini chat notice:", e)
 
-    # 2. Try Groq Free API (Llama 3.3 70B Free Tier)
+    # 2. Try Groq Free API (Compound / Qwen Free Tier)
     if groq_key:
-        try:
-            url = "https://api.groq.com/openai/v1/chat/completions"
-            headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
-            payload = {
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": KRISH_SYSTEM_PROMPT},
-                    {"role": "user", "content": query}
-                ],
-                "max_tokens": 150,
-                "temperature": 0.6
-            }
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        text = data["choices"][0]["message"]["content"].strip()
-                        return {"answer": text, "provider": "groq-llama-3.3"}
-        except Exception as e:
-            print("Groq chat notice:", e)
+        for model_name in ["groq/compound", "qwen/qwen3.6-27b", "openai/gpt-oss-120b"]:
+            try:
+                url = "https://api.groq.com/openai/v1/chat/completions"
+                headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+                payload = {
+                    "model": model_name,
+                    "messages": [
+                        {"role": "system", "content": KRISH_SYSTEM_PROMPT},
+                        {"role": "user", "content": query}
+                    ],
+                    "max_tokens": 140,
+                    "temperature": 0.6
+                }
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            raw_content = data["choices"][0]["message"]["content"].strip()
+                            clean_content = re.sub(r'<think>.*?</think>', '', raw_content, flags=re.DOTALL).strip()
+                            if clean_content:
+                                return {"answer": clean_content, "provider": f"groq-{model_name}"}
+            except Exception as e:
+                print(f"Groq {model_name} chat notice:", e)
 
     # 3. Try OpenRouter Free API
     if openrouter_key:
