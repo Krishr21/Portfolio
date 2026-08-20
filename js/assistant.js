@@ -585,12 +585,17 @@ class ConversationalAssistant {
       if (!SpeechRecognitionClass) return null;
       try {
         const sr = new SpeechRecognitionClass();
-        sr.continuous = true;
+        sr.continuous = false; // Eliminates continuous socket timeout and network errors
         sr.interimResults = true;
         sr.lang = 'en-US';
 
+        let recognizedText = '';
+        let processedThisTurn = false;
+
         sr.onstart = () => {
           this.isListening = true;
+          recognizedText = '';
+          processedThisTurn = false;
           if (this.micBtn) {
             this.micBtn.classList.add('recording');
             this.micBtn.title = 'Live Voice Mode: Active (Click to stop)';
@@ -599,11 +604,10 @@ class ConversationalAssistant {
             this.queryInput.placeholder = '🎙️ Listening... Speak naturally';
           }
           updateHud('listening', '🎙️ Live Voice: Listening in Real-Time...');
-          audioVis.playChime();
         };
 
         sr.onresult = (event) => {
-          // Barge-in: immediately cancel speech if user starts talking
+          // Barge-in: immediately cancel any existing speech
           this.stopAllSpeech();
 
           let finalTranscript = '';
@@ -619,108 +623,107 @@ class ConversationalAssistant {
           }
 
           const currentText = (finalTranscript + interimTranscript).trim();
-          if (currentText && this.queryInput) {
-            this.queryInput.value = currentText;
+          if (currentText) {
+            recognizedText = currentText;
+            if (this.queryInput) this.queryInput.value = currentText;
           }
 
-          // Adaptive fast silence detector: 260ms on final tokens, 400ms on interim
+          // Fast adaptive silence detector (280ms)
           if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
-          const hasFinal = event.results[event.results.length - 1]?.isFinal;
-          const waitTime = hasFinal ? 260 : 400;
-
-          if (currentText.length > 2) {
+          if (recognizedText.length > 1) {
             this.speechSilenceTimer = setTimeout(() => {
-              const fullQuery = (this.queryInput ? this.queryInput.value : currentText).trim();
-              if (fullQuery.length > 1) {
+              if (!processedThisTurn && recognizedText.trim().length > 1) {
+                processedThisTurn = true;
+                const queryToRun = (this.queryInput ? this.queryInput.value : recognizedText).trim();
                 updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
                 try { sr.stop(); } catch (e) {}
-                stopMicAnalyser();
-                this.handleUserQuestion(fullQuery, () => {
-                  // After speaking answer, if still in Live Voice mode, seamlessly resume listening
-                  if (this.isLiveVoiceMode) {
+                this.handleUserQuestion(queryToRun, () => {
+                  if (this.isLiveVoiceMode && !this.isSpeaking) {
                     if (this.queryInput) this.queryInput.value = '';
-                    try {
-                      sr.start();
-                      if (this.micStream) startMicAnalyser(this.micStream);
-                    } catch (e) {}
+                    setTimeout(() => {
+                      if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
+                        try { sr.start(); } catch (e) {
+                          this.speechRecognition = setupRecognition();
+                          try { this.speechRecognition?.start(); } catch (err) {}
+                        }
+                      }
+                    }, 250);
                   }
                 });
               }
-            }, waitTime);
+            }, 300);
           }
         };
 
         sr.onerror = (e) => {
-          console.warn('Speech recognition status:', e.error);
+          console.warn('Speech recognition notice:', e.error);
           if (e.error === 'no-speech' || e.error === 'aborted') {
             return;
-          }
-
-          if (e.error === 'network') {
-            // If user spoke a query before network drop, process it immediately
-            const pendingQuery = this.queryInput ? this.queryInput.value.trim() : '';
-            if (pendingQuery.length > 2 && !this.isSpeaking) {
-              if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
-              updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
-              stopMicAnalyser();
-              this.handleUserQuestion(pendingQuery, () => {
-                if (this.isLiveVoiceMode) {
-                  if (this.queryInput) this.queryInput.value = '';
-                  setTimeout(() => {
-                    this.speechRecognition = setupRecognition();
-                    try { this.speechRecognition?.start(); } catch (err) {}
-                  }, 300);
-                }
-              });
-              return;
-            }
-
-            // If idle during Live Voice mode, silently rebuild and reconnect recognition
-            if (this.isLiveVoiceMode && !this.isSpeaking) {
-              setTimeout(() => {
-                if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
-                  this.speechRecognition = setupRecognition();
-                  try {
-                    this.speechRecognition?.start();
-                  } catch (err) {}
-                }
-              }, 400);
-              return;
-            }
           }
 
           if (e.error === 'not-allowed') {
             this.isListening = false;
             this.isLiveVoiceMode = false;
-            stopMicAnalyser();
             if (this.micBtn) this.micBtn.classList.remove('recording');
             if (this.queryInput) {
               this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
             }
             updateHud('error', '⚠️ Microphone access blocked. Please allow mic in browser URL bar.');
             window.showToast?.('⚠️ Microphone access blocked. Please allow microphone in browser URL bar.');
+            return;
+          }
+
+          // On network or other transient error, if we have text, process it
+          if (!processedThisTurn && recognizedText.trim().length > 1) {
+            processedThisTurn = true;
+            const queryToRun = (this.queryInput ? this.queryInput.value : recognizedText).trim();
+            updateHud('thinking', '🧠 Processing Spoken Question...');
+            this.handleUserQuestion(queryToRun, () => {
+              if (this.isLiveVoiceMode && !this.isSpeaking) {
+                if (this.queryInput) this.queryInput.value = '';
+                setTimeout(() => {
+                  if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
+                    try { sr.start(); } catch (err) {}
+                  }
+                }, 250);
+              }
+            });
           }
         };
 
         sr.onend = () => {
           this.isListening = false;
+          // If ended naturally and we have an unprocessed query
+          if (!processedThisTurn && recognizedText.trim().length > 1) {
+            processedThisTurn = true;
+            const queryToRun = (this.queryInput ? this.queryInput.value : recognizedText).trim();
+            updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
+            this.handleUserQuestion(queryToRun, () => {
+              if (this.isLiveVoiceMode && !this.isSpeaking) {
+                if (this.queryInput) this.queryInput.value = '';
+                setTimeout(() => {
+                  if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
+                    try { sr.start(); } catch (e) {}
+                  }
+                }, 250);
+              }
+            });
+            return;
+          }
+
+          // If Live Voice mode is active and no speech was detected, seamlessly restart
           if (this.isLiveVoiceMode && !this.isSpeaking) {
-            // Seamless auto-restart in Live Voice mode
             setTimeout(() => {
               if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
                 try {
                   sr.start();
-                  this.isListening = true;
-                  if (this.micBtn) this.micBtn.classList.add('recording');
-                  if (this.micStream) startMicAnalyser(this.micStream);
                 } catch (e) {
                   this.speechRecognition = setupRecognition();
                   try { this.speechRecognition?.start(); } catch (err) {}
                 }
               }
-            }, 300);
+            }, 250);
           } else if (!this.isLiveVoiceMode) {
-            stopMicAnalyser();
             if (this.micBtn) this.micBtn.classList.remove('recording');
             if (this.queryInput) {
               this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
@@ -755,37 +758,15 @@ class ConversationalAssistant {
             try { this.speechRecognition.stop(); } catch (e) {}
           }
           stopMicAnalyser();
-          if (this.micStream) {
-            try {
-              this.micStream.getTracks().forEach(t => t.stop());
-              this.micStream = null;
-            } catch (e) {}
-          }
           updateHud('hidden');
           window.showToast?.('⏹️ Live Voice Mode Stopped');
         } else {
-          // Toggle on: Stop any playing audio to prevent acoustic feedback
+          // Toggle on
           this.stopAllSpeech();
           this.isLiveVoiceMode = true;
           if (this.micBtn) this.micBtn.classList.add('recording');
           updateHud('listening', '🎙️ Live Voice: Listening in Real-Time...');
 
-          // 1. Proactively request hardware microphone permission
-          try {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-              this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-              startMicAnalyser(this.micStream);
-            }
-          } catch (permErr) {
-            console.warn('Microphone permission blocked:', permErr);
-            this.isLiveVoiceMode = false;
-            if (this.micBtn) this.micBtn.classList.remove('recording');
-            updateHud('error', '⚠️ Microphone blocked. Click URL lock icon to allow.');
-            window.showToast?.('⚠️ Microphone access blocked. Please allow microphone permission in browser URL bar.');
-            return;
-          }
-
-          // 2. Start streaming recognition immediately (0ms delay)
           if (!this.speechRecognition) {
             this.speechRecognition = setupRecognition();
           }
@@ -794,20 +775,22 @@ class ConversationalAssistant {
             if (this.queryInput) this.queryInput.value = '';
             try {
               this.speechRecognition.start();
+              audioVis.playChime();
             } catch (e) {
-              console.warn('Speech recognition start error:', e);
+              console.warn('Speech recognition start retry:', e);
+              this.speechRecognition = setupRecognition();
               try {
-                this.speechRecognition.stop();
-                setTimeout(() => {
-                  if (this.speechRecognition) this.speechRecognition.start();
-                }, 50);
-              } catch (retryErr) {}
+                this.speechRecognition?.start();
+                audioVis.playChime();
+              } catch (err) {
+                console.warn('Speech recognition start failed:', err);
+              }
             }
           } else {
             this.isLiveVoiceMode = false;
             if (this.micBtn) this.micBtn.classList.remove('recording');
             updateHud('error', '🎙️ Speech recognition not supported. Try Chrome or Safari.');
-            window.showToast?.('💡 Speech recognition works best in Chrome or Safari. You can also click any prompt below!');
+            window.showToast?.('💡 Speech recognition works best in Chrome or Safari.');
           }
         }
       });
