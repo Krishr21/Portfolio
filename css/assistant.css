@@ -555,9 +555,9 @@
 }
 
 [data-theme="crimson"] .assistant-bottom-nav {
-  background: rgba(36, 14, 14, 0.92);
-  border: 1px solid rgba(255, 84, 73, 0.35);
-  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 84, 73, 0.18);
+  background: linear-gradient(135deg, rgba(62, 20, 20, 0.96), rgba(42, 12, 12, 0.98)) !important;
+  border: 1.5px solid rgba(255, 84, 73, 0.6) !important;
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.85), 0 0 30px rgba(255, 84, 73, 0.35) !important;
 }
 
 .dock-divider {
@@ -572,7 +572,7 @@
 }
 
 [data-theme="crimson"] .dock-divider {
-  background: rgba(255, 84, 73, 0.25);
+  background: rgba(255, 84, 73, 0.4) !important;
 }
 
 .assistant-dock-item {
@@ -599,7 +599,7 @@
 }
 
 [data-theme="crimson"] .assistant-dock-item {
-  color: #fca5a5;
+  color: #ffe4e1 !important;
 }
 
 .assistant-dock-item:hover {
@@ -614,8 +614,8 @@
 }
 
 [data-theme="crimson"] .assistant-dock-item:hover {
-  background: rgba(255, 84, 73, 0.18);
-  color: #ffffff;
+  background: rgba(255, 84, 73, 0.28) !important;
+  color: #ffffff !important;
 }
 
 .assistant-dock-item .dock-icon {
@@ -642,9 +642,9 @@
 }
 
 [data-theme="crimson"] .assistant-dock-item kbd {
-  background: rgba(255, 84, 73, 0.2);
-  color: #fecaca;
-  border-color: rgba(255, 84, 73, 0.35);
+  background: rgba(255, 84, 73, 0.3) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 120, 110, 0.5) !important;
 }
 
 .assistant-dock-item.dock-item-highlight {
@@ -661,9 +661,10 @@
 }
 
 [data-theme="crimson"] .assistant-dock-item.dock-item-highlight {
-  background: linear-gradient(135deg, rgba(255, 84, 73, 0.28), rgba(255, 84, 73, 0.14));
-  border-color: rgba(255, 84, 73, 0.45);
-  color: #ffffff;
+  background: linear-gradient(135deg, #ff5449, #b91c1c) !important;
+  border: 1px solid #ff7b73 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 15px rgba(255, 77, 66, 0.45) !important;
 }
 
 .assistant-dock-item.dock-item-highlight:hover {
@@ -673,9 +674,9 @@
 }
 
 [data-theme="crimson"] .assistant-dock-item.dock-item-highlight:hover {
-  background: linear-gradient(135deg, #ff5449, #b91c1c);
-  border-color: #ff5449;
-  color: #ffffff;
+  background: linear-gradient(135deg, #ff7b73, #dc2626) !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
 }
 
 /* --- Responsive Breakpoints --- */
