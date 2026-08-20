@@ -562,9 +562,9 @@ class ConversationalAssistant {
         const audioBlob = new Blob(audioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
         audioChunks = [];
         
-        if (audioBlob.size < 2000) {
+        if (audioBlob.size < 1200) {
           isTranscribingAudio = false;
-          return; // Too short / ambient murmur
+          return;
         }
 
         updateHud('thinking', '🧠 Whisper Transcribing Voice...');
@@ -595,16 +595,15 @@ class ConversationalAssistant {
           }
         }
 
-        // 2. Call secure backend /api/stt
+        // 2. Direct binary POST to Render /api/stt
         if (!spokenText) {
           try {
             const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
-            const formData = new FormData();
-            formData.append('file', audioBlob, 'voice.webm');
 
             const res = await fetch(`${apiBase}/api/stt`, {
               method: 'POST',
-              body: formData
+              headers: { 'Content-Type': 'audio/webm' },
+              body: audioBlob
             });
             
             if (res.ok) {
@@ -618,6 +617,7 @@ class ConversationalAssistant {
 
         if (spokenText && spokenText.length > 1 && !spokenText.toLowerCase().includes('thank you.')) {
           if (this.queryInput) this.queryInput.value = spokenText;
+          updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
           this.handleUserQuestion(spokenText, () => {
             isTranscribingAudio = false;
             if (this.isLiveVoiceMode && !this.isSpeaking) {
@@ -675,8 +675,8 @@ class ConversationalAssistant {
             silenceCount = 0;
           } else if (voiceEnergyDetected) {
             silenceCount++;
-            // When voice stops for ~450ms, trigger Whisper transcription if browser STT hasn't fired
-            if (silenceCount > 28 && !isTranscribingAudio && !this.isSpeaking) {
+            // When voice stops for ~350ms, trigger Whisper transcription
+            if (silenceCount > 18 && !isTranscribingAudio && !this.isSpeaking) {
               voiceEnergyDetected = false;
               silenceCount = 0;
               const currentInput = this.queryInput ? this.queryInput.value.trim() : '';
@@ -808,8 +808,15 @@ class ConversationalAssistant {
         };
 
         sr.onerror = (e) => {
-          console.warn('Speech recognition notice:', e.error);
           if (e.error === 'no-speech' || e.error === 'aborted') {
+            return;
+          }
+
+          if (e.error === 'network') {
+            // Browser Web Speech API network drop: seamlessly capture audio via Whisper STT
+            if (voiceEnergyDetected) {
+              sendAudioForWhisperSTT();
+            }
             return;
           }
 
@@ -826,7 +833,7 @@ class ConversationalAssistant {
             return;
           }
 
-          // On network or other transient error, fallback to Whisper STT audio buffer
+          // On other transient error, fallback to Whisper STT audio buffer
           if (!processedThisTurn) {
             processedThisTurn = true;
             const queryToRun = (this.queryInput ? this.queryInput.value : recognizedText).trim();
