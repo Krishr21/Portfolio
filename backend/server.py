@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / ".env.local"
 load_dotenv(dotenv_path=env_path)
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from livekit import api
 from livekit import agents
@@ -238,9 +238,23 @@ async def chat_endpoint(q: str):
     return {"answer": fallback_text, "provider": "krish-semantic-engine"}
 
 @app.post("/api/stt")
-async def speech_to_text_endpoint(file: UploadFile = File(...)):
-    """Transcribes audio using Groq Whisper Large v3 Turbo (sub-150ms) or Speechmatics STT."""
-    audio_bytes = await file.read()
+async def speech_to_text_endpoint(request: Request):
+    """Transcribes audio using Groq Whisper Large v3 Turbo (sub-150ms) with zero multipart dependency."""
+    content_type = request.headers.get("content-type", "")
+    audio_bytes = None
+
+    if "multipart/form-data" in content_type:
+        try:
+            form = await request.form()
+            file_field = form.get("file")
+            if file_field and hasattr(file_field, "read"):
+                audio_bytes = await file_field.read()
+        except Exception:
+            pass
+    
+    if not audio_bytes:
+        audio_bytes = await request.body()
+
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="Empty audio file")
 
@@ -251,7 +265,7 @@ async def speech_to_text_endpoint(file: UploadFile = File(...)):
         try:
             headers = {"Authorization": f"Bearer {groq_key}"}
             data = aiohttp.FormData()
-            data.add_field("file", audio_bytes, filename=file.filename or "audio.webm", content_type=file.content_type or "audio/webm")
+            data.add_field("file", audio_bytes, filename="audio.webm", content_type="audio/webm")
             data.add_field("model", "whisper-large-v3-turbo")
             data.add_field("language", "en")
             
