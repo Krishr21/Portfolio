@@ -269,8 +269,8 @@ class ConversationalAssistant {
     }
   }
 
-  // --- Realistic Human Voice Synthesizer (Speechmatics Neural Studio Voice "sarah") ---
-  async speakText(plainText, onComplete = null) {
+  // --- High-Performance Zero-Delay Speechmatics Voice Streamer ---
+  speakText(plainText, onComplete = null) {
     if (!plainText) {
       if (onComplete) onComplete();
       return;
@@ -292,40 +292,89 @@ class ConversationalAssistant {
       return;
     }
 
-    // Stop any currently playing audio immediately to prevent duplicate voices
+    // Stop any previous speech immediately
     this.stopAllSpeech();
 
-    // Create a new AbortController so any prior/cancelled requests terminate
     this._speechAbortController = new AbortController();
     const currentSignal = this._speechAbortController.signal;
 
     const hud = document.getElementById('liveVoiceHud');
     const hudStatus = document.getElementById('liveVoiceStatusText');
-    const updateHudVoice = (txt) => {
-      if (hud && hud.style.display !== 'none' && hudStatus) {
-        hudStatus.textContent = txt;
-      }
-    };
-
-    updateHudVoice('🔊 K.R.I.S.H. Speaking (Speechmatics Sarah)...');
+    if (hud && hud.style.display !== 'none' && hudStatus) {
+      hudStatus.textContent = '🔊 K.R.I.S.H. Speaking (Speechmatics Sarah)...';
+    }
 
     const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
 
-    // Clean string trimmed to max 350 characters to keep response snappy and single-track
-    const utteranceText = cleanText.length > 350 ? cleanText.slice(0, 350).replace(/\s+\S*$/, '...') : cleanText;
+    // Split text into natural concise sentences (80-130 chars) for instant first-chunk synthesis
+    const rawSentences = cleanText.match(/[^.!?]+[.!?]+|\S+/g) || [cleanText];
+    const sentences = [];
+    let cur = "";
+    for (const s of rawSentences) {
+      if ((cur + " " + s).length < 120) {
+        cur = cur ? (cur + " " + s) : s;
+      } else {
+        if (cur) sentences.push(cur.trim());
+        cur = s;
+      }
+    }
+    if (cur) sentences.push(cur.trim());
+
+    if (sentences.length === 0) {
+      if (onComplete) onComplete();
+      return;
+    }
 
     this._isSpeakingQueue = true;
 
-    try {
-      const speechmaticsUrl = `${apiBase}/api/tts?voice=sarah&text=${encodeURIComponent(utteranceText)}`;
-      
-      const res = await fetch(speechmaticsUrl, { signal: currentSignal });
-      if (!res.ok) throw new Error(`Speechmatics HTTP ${res.status}`);
-      const blob = await res.blob();
+    // Helper: Fetches audio blob for a sentence
+    const fetchBlob = async (text) => {
+      try {
+        const url = `${apiBase}/api/tts?voice=sarah&text=${encodeURIComponent(text)}`;
+        const res = await fetch(url, { signal: currentSignal });
+        if (!res.ok) return null;
+        return await res.blob();
+      } catch (e) {
+        return null;
+      }
+    };
+
+    // Pre-fetch Map for seamless 0ms transitions
+    const prefetchedBlobs = new Map();
+
+    // Start fetching sentence 1 immediately
+    const firstFetchPromise = fetchBlob(sentences[0]);
+
+    // Background prefetch remaining sentences concurrently while sentence 1 is loading/playing
+    for (let i = 1; i < sentences.length; i++) {
+      prefetchedBlobs.set(i, fetchBlob(sentences[i]));
+    }
+
+    const playSentence = async (index) => {
+      if (!this._isSpeakingQueue || currentSignal.aborted || index >= sentences.length) {
+        this.stopAllSpeech();
+        if (onComplete) onComplete();
+        return;
+      }
+
+      let blob = null;
+      if (index === 0) {
+        blob = await firstFetchPromise;
+      } else {
+        const promise = prefetchedBlobs.get(index);
+        blob = promise ? await promise : await fetchBlob(sentences[index]);
+      }
+
       if (!this._isSpeakingQueue || currentSignal.aborted) return;
 
-      const audioBlobUrl = URL.createObjectURL(blob);
-      const audio = new Audio(audioBlobUrl);
+      if (!blob) {
+        // If this chunk failed, smoothly proceed to next chunk
+        playSentence(index + 1);
+        return;
+      }
+
+      const audioUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioUrl);
       this._currentAudio = audio;
 
       audio.onplay = () => {
@@ -334,26 +383,29 @@ class ConversationalAssistant {
       };
 
       audio.onended = () => {
-        URL.revokeObjectURL(audioBlobUrl);
-        this.stopAllSpeech();
-        if (onComplete) onComplete();
+        URL.revokeObjectURL(audioUrl);
+        if (this._isSpeakingQueue && !currentSignal.aborted) {
+          playSentence(index + 1);
+        }
       };
 
-      audio.onerror = (err) => {
-        console.warn('Speechmatics playback notice:', err);
-        URL.revokeObjectURL(audioBlobUrl);
-        this.stopAllSpeech();
-        if (onComplete) onComplete();
+      audio.onerror = () => {
+        URL.revokeObjectURL(audioUrl);
+        if (this._isSpeakingQueue && !currentSignal.aborted) {
+          playSentence(index + 1);
+        }
       };
 
-      await audio.play();
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.warn('Speechmatics synthesis error:', err);
+      try {
+        await audio.play();
+      } catch (err) {
+        if (this._isSpeakingQueue && !currentSignal.aborted) {
+          playSentence(index + 1);
+        }
       }
-      this.stopAllSpeech();
-      if (onComplete) onComplete();
-    }
+    };
+
+    playSentence(0);
   }
 
   stopAudio() {
@@ -532,7 +584,7 @@ class ConversationalAssistant {
                   }
                 });
               }
-            }, 750);
+            }, 420);
           }
         };
 
