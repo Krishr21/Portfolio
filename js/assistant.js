@@ -267,6 +267,8 @@ class ConversationalAssistant {
       const plain = this.speechEl.innerText || this.speechEl.textContent;
       if (plain) this.speakText(plain);
     }
+  }
+
   // --- Realistic Human Voice Synthesizer (Speechmatics Neural Studio Voice "sarah") ---
   async speakText(plainText, onComplete = null) {
     if (!plainText) {
