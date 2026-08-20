@@ -278,7 +278,8 @@ class ConversationalAssistant {
       "VisionVault is Krish's multimodal video RAG pipeline.",
       "OrchestrAI is Krish's agent observability platform built with FastAPI, Postgres, Redis Pub/Sub, and WebSockets.",
       "CarWise-AI uses Google Gemini's native Search Grounding to eliminate hallucinations and stream verified real-time car listings with pros and cons.",
-      "Krish co-authored a peer-reviewed IEEE research paper benchmarking YOLOv8 on food recognition and 3D volume estimation.",
+      "Krish co-authored a peer-reviewed IEEE research paper benchmarking YOLOv8 for food recognition and 3D volume estimation.",
+      "He created a custom one thousand image benchmark with eighty-two percent recognition accuracy.",
       "Krish worked as an Automation and Integration Consultant at Utrecht IT Consulting in the Netherlands, boosting event throughput by thirty percent using Solace pub/sub.",
       "Krish holds a three point eight four GPA in his Master of Science in Computer Science at the University of Texas at Arlington.",
       "Krish's core technical stack centers around Python, PyTorch, FastAPI, Qdrant, FAISS, Docker, Redis, and Solace messaging.",
@@ -976,7 +977,7 @@ class ConversationalAssistant {
     else if (has('ieee', 'paper', 'research', 'yolo', 'yolov8', 'food', 'volume', '3d volume', 'publication', 'journal')) {
       gesture = 'salute';
       answerHtml = `📑 <strong>IEEE Research Publication</strong>:<br><em>"Reviewing Advances in Food Image Recognition and Nutritional Assessment: Focus on YOLOv8"</em><br><br>• Co-authored a peer-reviewed research paper benchmarked in an <strong>IEEE Journal</strong>.<br>• Built a custom 1,000-image Indian Food dataset achieving <strong>82% recognition accuracy</strong>.<br>• Analyzed 3D volume estimation using stereo vision and Structure from Motion (SfM).`;
-      plainSpeech = `Krish co-authored a peer-reviewed IEEE research paper benchmarking YOLOv8 on food recognition and 3D volume estimation, creating a custom one thousand image benchmark with eighty-two percent accuracy.`;
+      plainSpeech = `Krish co-authored a peer-reviewed IEEE research paper benchmarking YOLOv8 for food recognition and 3D volume estimation. He created a custom one thousand image benchmark with eighty-two percent recognition accuracy.`;
       followUpChoices = [
         { label: "💼 Discuss Research with Krish", target: "hire-intro", primary: true },
         { label: "📜 Open Full Resume", action: "open-resume-modal" }
