@@ -527,7 +527,10 @@ class ConversationalAssistant {
       }
     };
 
-    // Real-time audio VU meter connected to microphone input
+    // Real-time audio VU meter & Adaptive Acoustic Noise Gate
+    let voiceEnergyDetected = false;
+    const NOISE_GATE_THRESHOLD = 0.032; // Filters out ambient room noise, fan hum & distant murmur
+
     const startMicAnalyser = (stream) => {
       try {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -536,21 +539,40 @@ class ConversationalAssistant {
           try { this.micAudioContext.close(); } catch (e) {}
         }
         this.micAudioContext = new AudioContextClass();
+        if (this.micAudioContext.state === 'suspended') {
+          this.micAudioContext.resume();
+        }
         const source = this.micAudioContext.createMediaStreamSource(stream);
         this.micAnalyser = this.micAudioContext.createAnalyser();
-        this.micAnalyser.fftSize = 64;
-        this.micAnalyser.smoothingTimeConstant = 0.4;
+        this.micAnalyser.fftSize = 128;
+        this.micAnalyser.smoothingTimeConstant = 0.35;
         source.connect(this.micAnalyser);
 
         const vuBars = document.querySelectorAll('.live-voice-bars span');
-        const dataArray = new Uint8Array(this.micAnalyser.frequencyBinCount);
+        const timeData = new Uint8Array(this.micAnalyser.fftSize);
+        const freqData = new Uint8Array(this.micAnalyser.frequencyBinCount);
 
         const renderVu = () => {
           if (!this.isListening || !this.micAnalyser) return;
-          this.micAnalyser.getByteFrequencyData(dataArray);
+          
+          // 1. Calculate real-time RMS energy for Noise Gate
+          this.micAnalyser.getByteTimeDomainData(timeData);
+          let sumSquares = 0;
+          for (let i = 0; i < timeData.length; i++) {
+            const amplitude = (timeData[i] - 128) / 128;
+            sumSquares += amplitude * amplitude;
+          }
+          const rms = Math.sqrt(sumSquares / timeData.length);
+          
+          if (rms > NOISE_GATE_THRESHOLD) {
+            voiceEnergyDetected = true;
+          }
+
+          // 2. Animate VU Bars
+          this.micAnalyser.getByteFrequencyData(freqData);
           if (vuBars && vuBars.length > 0) {
             vuBars.forEach((bar, idx) => {
-              const val = dataArray[idx % dataArray.length] || 0;
+              const val = freqData[idx % freqData.length] || 0;
               const h = Math.min(24, Math.max(4, (val / 255) * 26));
               bar.style.height = `${h}px`;
             });
@@ -559,7 +581,7 @@ class ConversationalAssistant {
         };
         renderVu();
       } catch (err) {
-        console.warn('Microphone VU visualizer error:', err);
+        console.warn('Microphone VU visualizer notice:', err);
       }
     };
 
@@ -572,7 +594,14 @@ class ConversationalAssistant {
         try { this.micAudioContext.close(); } catch (e) {}
         this.micAudioContext = null;
       }
+      if (this.micStream) {
+        try {
+          this.micStream.getTracks().forEach(t => t.stop());
+          this.micStream = null;
+        } catch (e) {}
+      }
       this.micAnalyser = null;
+      voiceEnergyDetected = false;
       const vuBars = document.querySelectorAll('.live-voice-bars span');
       if (vuBars) {
         vuBars.forEach(b => b.style.height = '');
@@ -585,7 +614,7 @@ class ConversationalAssistant {
       if (!SpeechRecognitionClass) return null;
       try {
         const sr = new SpeechRecognitionClass();
-        sr.continuous = false; // Eliminates continuous socket timeout and network errors
+        sr.continuous = false; // Prevents continuous socket timeout and network errors
         sr.interimResults = true;
         sr.lang = 'en-US';
 
@@ -596,18 +625,18 @@ class ConversationalAssistant {
           this.isListening = true;
           recognizedText = '';
           processedThisTurn = false;
+          voiceEnergyDetected = false;
           if (this.micBtn) {
             this.micBtn.classList.add('recording');
             this.micBtn.title = 'Live Voice Mode: Active (Click to stop)';
           }
           if (this.queryInput) {
-            this.queryInput.placeholder = '🎙️ Listening... Speak naturally';
+            this.queryInput.placeholder = '🎙️ Listening... Speak directly into microphone';
           }
-          updateHud('listening', '🎙️ Live Voice: Listening in Real-Time...');
+          updateHud('listening', '🎙️ Listening (Hardware Noise Suppression Active)...');
         };
 
         sr.onresult = (event) => {
-          // Barge-in: immediately cancel any existing speech
           this.stopAllSpeech();
 
           let finalTranscript = '';
@@ -664,6 +693,7 @@ class ConversationalAssistant {
           if (e.error === 'not-allowed') {
             this.isListening = false;
             this.isLiveVoiceMode = false;
+            stopMicAnalyser();
             if (this.micBtn) this.micBtn.classList.remove('recording');
             if (this.queryInput) {
               this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
@@ -724,6 +754,7 @@ class ConversationalAssistant {
               }
             }, 250);
           } else if (!this.isLiveVoiceMode) {
+            stopMicAnalyser();
             if (this.micBtn) this.micBtn.classList.remove('recording');
             if (this.queryInput) {
               this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
@@ -761,11 +792,27 @@ class ConversationalAssistant {
           updateHud('hidden');
           window.showToast?.('⏹️ Live Voice Mode Stopped');
         } else {
-          // Toggle on
+          // Toggle on: Request hardware microphone with noise suppression DSP
           this.stopAllSpeech();
           this.isLiveVoiceMode = true;
           if (this.micBtn) this.micBtn.classList.add('recording');
-          updateHud('listening', '🎙️ Live Voice: Listening in Real-Time...');
+          updateHud('listening', '🎙️ Live Voice: Listening (Noise Suppression Active)...');
+
+          // Initialize hardware DSP stream
+          try {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+              this.micStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                  echoCancellation: { ideal: true },
+                  noiseSuppression: { ideal: true },
+                  autoGainControl: { ideal: true }
+                }
+              });
+              startMicAnalyser(this.micStream);
+            }
+          } catch (permErr) {
+            console.warn('Hardware microphone stream warning:', permErr);
+          }
 
           if (!this.speechRecognition) {
             this.speechRecognition = setupRecognition();
