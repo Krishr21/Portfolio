@@ -773,182 +773,6 @@ class ConversationalAssistant {
       }
     };
 
-    const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    const setupRecognition = () => {
-      if (!SpeechRecognitionClass) return null;
-      try {
-        const sr = new SpeechRecognitionClass();
-        sr.continuous = false; // Prevents continuous socket timeout and network errors
-        sr.interimResults = true;
-        sr.lang = 'en-US';
-
-        let recognizedText = '';
-        let processedThisTurn = false;
-        let hasNetworkError = false;
-
-        sr.onstart = () => {
-          this.isListening = true;
-          recognizedText = '';
-          processedThisTurn = false;
-          voiceEnergyDetected = false;
-          hasNetworkError = false;
-          if (this.micBtn) {
-            this.micBtn.classList.add('recording');
-            this.micBtn.title = 'Live Voice Mode: Active (Click to stop)';
-          }
-          if (this.queryInput) {
-            this.queryInput.placeholder = '🎙️ Listening... Speak directly into microphone';
-          }
-          updateHud('listening', '🎙️ Listening (Hardware Noise Suppression Active)...');
-        };
-
-        sr.onresult = (event) => {
-          this.stopAllSpeech();
-
-          let finalTranscript = '';
-          let interimTranscript = '';
-
-          for (let i = 0; i < event.results.length; ++i) {
-            const res = event.results[i];
-            if (res.isFinal) {
-              finalTranscript += res[0].transcript + ' ';
-            } else {
-              interimTranscript += res[0].transcript;
-            }
-          }
-
-          const currentText = (finalTranscript + interimTranscript).trim();
-          if (currentText) {
-            recognizedText = currentText;
-            if (this.queryInput) this.queryInput.value = currentText;
-          }
-
-          // Fast adaptive silence detector (280ms)
-          if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
-          if (recognizedText.length > 1) {
-            this.speechSilenceTimer = setTimeout(() => {
-              if (!processedThisTurn && recognizedText.trim().length > 1) {
-                processedThisTurn = true;
-                const queryToRun = (this.queryInput ? this.queryInput.value : recognizedText).trim();
-                updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
-                try { sr.stop(); } catch (e) {}
-                this.handleUserQuestion(queryToRun, () => {
-                  if (this.isLiveVoiceMode && !this.isSpeaking) {
-                    if (this.queryInput) this.queryInput.value = '';
-                    setTimeout(() => {
-                      if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking && !hasNetworkError) {
-                        try { sr.start(); } catch (e) {
-                          this.speechRecognition = setupRecognition();
-                          try { this.speechRecognition?.start(); } catch (err) {}
-                        }
-                      }
-                    }, 250);
-                  }
-                });
-              }
-            }, 300);
-          }
-        };
-
-        sr.onerror = (e) => {
-          if (e.error === 'no-speech' || e.error === 'aborted') {
-            return;
-          }
-
-          if (e.error === 'network') {
-            hasNetworkError = true;
-            // Browser Web Speech API network drop: seamlessly capture audio via Whisper STT
-            if (voiceEnergyDetected) {
-              stopAndTranscribeAudio();
-            }
-            return;
-          }
-
-          if (e.error === 'not-allowed') {
-            this.isListening = false;
-            this.isLiveVoiceMode = false;
-            stopMicAnalyser();
-            if (this.micBtn) this.micBtn.classList.remove('recording');
-            if (this.queryInput) {
-              this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
-            }
-            updateHud('error', '⚠️ Microphone access blocked. Please allow mic in browser URL bar.');
-            window.showToast?.('⚠️ Microphone access blocked. Please allow microphone in browser URL bar.');
-            return;
-          }
-
-          // On other transient error, fallback to Whisper STT audio buffer
-          if (!processedThisTurn) {
-            processedThisTurn = true;
-            const queryToRun = (this.queryInput ? this.queryInput.value : recognizedText).trim();
-            if (queryToRun.length > 1) {
-              updateHud('thinking', '🧠 Processing Spoken Question...');
-              this.handleUserQuestion(queryToRun, () => {
-                if (this.isLiveVoiceMode && !this.isSpeaking) {
-                  if (this.queryInput) this.queryInput.value = '';
-                  setTimeout(() => {
-                    if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking && !hasNetworkError) {
-                      try { sr.start(); } catch (err) {}
-                    }
-                  }, 250);
-                }
-              });
-            } else {
-              stopAndTranscribeAudio();
-            }
-          }
-        };
-
-        sr.onend = () => {
-          this.isListening = false;
-          if (!processedThisTurn && recognizedText.trim().length > 1) {
-            processedThisTurn = true;
-            const queryToRun = (this.queryInput ? this.queryInput.value : recognizedText).trim();
-            updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
-            this.handleUserQuestion(queryToRun, () => {
-              if (this.isLiveVoiceMode && !this.isSpeaking) {
-                if (this.queryInput) this.queryInput.value = '';
-                setTimeout(() => {
-                  if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking && !hasNetworkError) {
-                    try { sr.start(); } catch (e) {}
-                  }
-                }, 250);
-              }
-            });
-            return;
-          }
-
-          if (this.isLiveVoiceMode && !this.isSpeaking && !hasNetworkError) {
-            setTimeout(() => {
-              if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking && !hasNetworkError) {
-                try {
-                  sr.start();
-                } catch (e) {
-                  this.speechRecognition = setupRecognition();
-                  try { this.speechRecognition?.start(); } catch (err) {}
-                }
-              }
-            }, 400);
-          } else if (!this.isLiveVoiceMode) {
-            stopMicAnalyser();
-            if (this.micBtn) this.micBtn.classList.remove('recording');
-            if (this.queryInput) {
-              this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
-            }
-            updateHud('hidden');
-          }
-        };
-
-        return sr;
-      } catch (err) {
-        console.warn('Speech recognition creation error:', err);
-        return null;
-      }
-    };
-
-    this.speechRecognition = setupRecognition();
-
     if (this.micBtn) {
       this.micBtn.addEventListener('click', async () => {
         // Auto-enable audio visualizer & voice
@@ -956,15 +780,13 @@ class ConversationalAssistant {
           audioVis.toggleSound();
         }
 
-        if (this.isListening || this.isLiveVoiceMode) {
-          // If speech was recorded during this session, finalize & transcribe it
+        if (this.isLiveVoiceMode) {
+          // Toggle off
           stopAndTranscribeAudio();
           this.isLiveVoiceMode = false;
-          this.isListening = false;
-          if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
           if (this.micBtn) this.micBtn.classList.remove('recording');
-          if (this.speechRecognition) {
-            try { this.speechRecognition.stop(); } catch (e) {}
+          if (this.queryInput) {
+            this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
           }
           stopMicAnalyser();
           updateHud('hidden');
@@ -974,9 +796,13 @@ class ConversationalAssistant {
           this.stopAllSpeech();
           this.isLiveVoiceMode = true;
           if (this.micBtn) this.micBtn.classList.add('recording');
+          if (this.queryInput) {
+            this.queryInput.value = '';
+            this.queryInput.placeholder = '🎙️ Listening... Speak directly into microphone';
+          }
           updateHud('listening', '🎙️ Live Voice: Listening (Noise Suppression Active)...');
+          audioVis.playChime();
 
-          // Initialize hardware DSP stream & Whisper recorder
           try {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
               this.micStream = await navigator.mediaDevices.getUserMedia({
@@ -987,35 +813,15 @@ class ConversationalAssistant {
                 }
               });
               startMicAnalyser(this.micStream);
+            } else {
+              throw new Error('getUserMedia not supported in this browser');
             }
           } catch (permErr) {
             console.warn('Hardware microphone stream warning:', permErr);
-          }
-
-          if (!this.speechRecognition) {
-            this.speechRecognition = setupRecognition();
-          }
-
-          if (this.speechRecognition) {
-            if (this.queryInput) this.queryInput.value = '';
-            try {
-              this.speechRecognition.start();
-              audioVis.playChime();
-            } catch (e) {
-              console.warn('Speech recognition start retry:', e);
-              this.speechRecognition = setupRecognition();
-              try {
-                this.speechRecognition?.start();
-                audioVis.playChime();
-              } catch (err) {
-                console.warn('Speech recognition start failed:', err);
-              }
-            }
-          } else {
             this.isLiveVoiceMode = false;
             if (this.micBtn) this.micBtn.classList.remove('recording');
-            updateHud('error', '🎙️ Speech recognition not supported. Try Chrome or Safari.');
-            window.showToast?.('💡 Speech recognition works best in Chrome or Safari.');
+            updateHud('error', '⚠️ Microphone blocked. Click URL lock to allow.');
+            window.showToast?.('⚠️ Microphone access blocked. Please allow mic in browser settings.');
           }
         }
       });
