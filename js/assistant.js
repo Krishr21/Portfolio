@@ -651,18 +651,52 @@ class ConversationalAssistant {
         };
 
         sr.onerror = (e) => {
-          console.warn('Speech recognition error:', e.error);
+          console.warn('Speech recognition status:', e.error);
           if (e.error === 'no-speech' || e.error === 'aborted') {
             return;
           }
-          this.isListening = false;
-          stopMicAnalyser();
-          if (this.micBtn) this.micBtn.classList.remove('recording');
-          if (this.queryInput) {
-            this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
+
+          if (e.error === 'network') {
+            // If user spoke a query before network drop, process it immediately
+            const pendingQuery = this.queryInput ? this.queryInput.value.trim() : '';
+            if (pendingQuery.length > 2 && !this.isSpeaking) {
+              if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
+              updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
+              stopMicAnalyser();
+              this.handleUserQuestion(pendingQuery, () => {
+                if (this.isLiveVoiceMode) {
+                  if (this.queryInput) this.queryInput.value = '';
+                  setTimeout(() => {
+                    this.speechRecognition = setupRecognition();
+                    try { this.speechRecognition?.start(); } catch (err) {}
+                  }, 300);
+                }
+              });
+              return;
+            }
+
+            // If idle during Live Voice mode, silently rebuild and reconnect recognition
+            if (this.isLiveVoiceMode && !this.isSpeaking) {
+              setTimeout(() => {
+                if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
+                  this.speechRecognition = setupRecognition();
+                  try {
+                    this.speechRecognition?.start();
+                  } catch (err) {}
+                }
+              }, 400);
+              return;
+            }
           }
 
           if (e.error === 'not-allowed') {
+            this.isListening = false;
+            this.isLiveVoiceMode = false;
+            stopMicAnalyser();
+            if (this.micBtn) this.micBtn.classList.remove('recording');
+            if (this.queryInput) {
+              this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
+            }
             updateHud('error', '⚠️ Microphone access blocked. Please allow mic in browser URL bar.');
             window.showToast?.('⚠️ Microphone access blocked. Please allow microphone in browser URL bar.');
           }
@@ -670,8 +704,23 @@ class ConversationalAssistant {
 
         sr.onend = () => {
           this.isListening = false;
-          stopMicAnalyser();
-          if (!this.isLiveVoiceMode) {
+          if (this.isLiveVoiceMode && !this.isSpeaking) {
+            // Seamless auto-restart in Live Voice mode
+            setTimeout(() => {
+              if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
+                try {
+                  sr.start();
+                  this.isListening = true;
+                  if (this.micBtn) this.micBtn.classList.add('recording');
+                  if (this.micStream) startMicAnalyser(this.micStream);
+                } catch (e) {
+                  this.speechRecognition = setupRecognition();
+                  try { this.speechRecognition?.start(); } catch (err) {}
+                }
+              }
+            }, 300);
+          } else if (!this.isLiveVoiceMode) {
+            stopMicAnalyser();
             if (this.micBtn) this.micBtn.classList.remove('recording');
             if (this.queryInput) {
               this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
