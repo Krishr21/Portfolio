@@ -532,7 +532,7 @@ class ConversationalAssistant {
     let audioChunks = [];
     let mediaRecorder = null;
     let isTranscribingAudio = false;
-    const NOISE_GATE_THRESHOLD = 0.028; // Filters out ambient room noise, fan hum & background chatter
+    const NOISE_GATE_THRESHOLD = 0.006; // Highly sensitive to natural speaking voice, ignores zero-sound silence
 
     const startAudioRecording = (stream) => {
       try {
@@ -559,10 +559,11 @@ class ConversationalAssistant {
       if (isTranscribingAudio || this.isSpeaking || !audioChunks || audioChunks.length === 0) return;
       try {
         isTranscribingAudio = true;
-        const audioBlob = new Blob(audioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
+        const currentMime = mediaRecorder?.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunks, { type: currentMime });
         audioChunks = [];
         
-        if (audioBlob.size < 1200) {
+        if (audioBlob.size < 400) {
           isTranscribingAudio = false;
           return;
         }
@@ -576,7 +577,8 @@ class ConversationalAssistant {
         if (clientGroqKey) {
           try {
             const directForm = new FormData();
-            directForm.append('file', audioBlob, 'voice.webm');
+            const ext = currentMime.includes('mp4') ? 'mp4' : 'webm';
+            directForm.append('file', audioBlob, `voice.${ext}`);
             directForm.append('model', 'whisper-large-v3-turbo');
             directForm.append('language', 'en');
 
@@ -602,7 +604,7 @@ class ConversationalAssistant {
 
             const res = await fetch(`${apiBase}/api/stt`, {
               method: 'POST',
-              headers: { 'Content-Type': 'audio/webm' },
+              headers: { 'Content-Type': currentMime },
               body: audioBlob
             });
             
@@ -661,7 +663,7 @@ class ConversationalAssistant {
         const renderVu = () => {
           if (!this.isListening || !this.micAnalyser) return;
           
-          // 1. Calculate real-time RMS energy for Noise Gate
+          // 1. Calculate real-time RMS energy for Voice Activity Detection
           this.micAnalyser.getByteTimeDomainData(timeData);
           let sumSquares = 0;
           for (let i = 0; i < timeData.length; i++) {
@@ -673,10 +675,11 @@ class ConversationalAssistant {
           if (rms > NOISE_GATE_THRESHOLD) {
             voiceEnergyDetected = true;
             silenceCount = 0;
+            updateHud('listening', '🎙️ Voice Detected: Listening...');
           } else if (voiceEnergyDetected) {
             silenceCount++;
-            // When voice stops for ~350ms, trigger Whisper transcription
-            if (silenceCount > 18 && !isTranscribingAudio && !this.isSpeaking) {
+            // When voice stops for ~300ms, immediately trigger Whisper transcription
+            if (silenceCount > 16 && !isTranscribingAudio && !this.isSpeaking) {
               voiceEnergyDetected = false;
               silenceCount = 0;
               const currentInput = this.queryInput ? this.queryInput.value.trim() : '';
@@ -915,7 +918,10 @@ class ConversationalAssistant {
         }
 
         if (this.isListening || this.isLiveVoiceMode) {
-          // Toggle off
+          // If speech was recorded during this session, transcribe it immediately
+          if (audioChunks && audioChunks.length > 0) {
+            sendAudioForWhisperSTT();
+          }
           this.isLiveVoiceMode = false;
           this.isListening = false;
           if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);

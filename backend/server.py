@@ -265,9 +265,21 @@ async def speech_to_text_endpoint(request: Request):
     # 1. Try Groq Whisper Large v3 Turbo (High speed, noise-resilient STT)
     if groq_key:
         try:
+            ext = "webm"
+            mime = "audio/webm"
+            if "mp4" in content_type:
+                ext = "mp4"
+                mime = "audio/mp4"
+            elif "wav" in content_type:
+                ext = "wav"
+                mime = "audio/wav"
+            elif "ogg" in content_type:
+                ext = "ogg"
+                mime = "audio/ogg"
+
             headers = {"Authorization": f"Bearer {groq_key}"}
             data = aiohttp.FormData()
-            data.add_field("file", audio_bytes, filename="audio.webm", content_type="audio/webm")
+            data.add_field("file", audio_bytes, filename=f"audio.{ext}", content_type=mime)
             data.add_field("model", "whisper-large-v3-turbo")
             data.add_field("language", "en")
             
@@ -277,6 +289,9 @@ async def speech_to_text_endpoint(request: Request):
                         res_json = await resp.json()
                         text = res_json.get("text", "").strip()
                         return {"text": text, "provider": "groq-whisper-v3-turbo"}
+                    else:
+                        err_text = await resp.text()
+                        print("Groq STT error response:", resp.status, err_text)
         except Exception as e:
             print("Groq Whisper STT notice:", e)
 
