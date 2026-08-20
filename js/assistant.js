@@ -6,7 +6,10 @@ import { RESUME_DATA } from './resume-data.js';
 import { audioVis } from './audio-visualizer.js';
 import { Assistant3DAvatar } from './avatar-3d.js';
 
-const API_BASE = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : '');
+const API_BASE = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
+
+// High-speed In-Memory Audio Cache for 0ms speech playback
+const AUDIO_BLOB_CACHE = new Map();
 
 class ConversationalAssistant {
   constructor() {
@@ -260,6 +263,50 @@ class ConversationalAssistant {
     this.renderStep('greeting');
     window.assistantEngine = this;
     window.assistant = this;
+
+    // Background warmup audio cache for 0ms voice answer startup
+    this.warmupVoiceCache();
+  }
+
+  warmupVoiceCache() {
+    const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
+
+    const keyPhrases = [
+      "I am K.R.I.S.H., Krish's Responsive Intelligent Software Host.",
+      "Krish Ruparel is an AI Engineer and Distributed Systems Architect pursuing his Master of Science in Computer Science at UT Arlington with a three point eight four GPA.",
+      "Here is why you should hire Krish: First, proven production impact with a thirty percent event throughput boost using Solace pub/sub.",
+      "VisionVault is Krish's multimodal video RAG pipeline.",
+      "OrchestrAI is Krish's agent observability platform built with FastAPI, Postgres, Redis Pub/Sub, and WebSockets.",
+      "CarWise-AI uses Google Gemini's native Search Grounding to eliminate hallucinations and stream verified real-time car listings with pros and cons.",
+      "Krish co-authored a peer-reviewed IEEE research paper benchmarking YOLOv8 on food recognition and 3D volume estimation.",
+      "Krish worked as an Automation and Integration Consultant at Utrecht IT Consulting in the Netherlands, boosting event throughput by thirty percent using Solace pub/sub.",
+      "Krish holds a three point eight four GPA in his Master of Science in Computer Science at the University of Texas at Arlington.",
+      "Krish's core technical stack centers around Python, PyTorch, FastAPI, Qdrant, FAISS, Docker, Redis, and Solace messaging.",
+      "Krish is actively interviewing for Fall 2026 and Spring 2027 AI Engineer, Machine Learning, and Distributed Systems roles.",
+      "You can reach Krish directly via email at krishruparel.career@gmail.com, or by phone at (682)-392-0214.",
+      "Krish is located in Arlington, Texas, and is fully open to relocate anywhere in the United States.",
+      "Hello there! Wonderful to meet you! What would you like to explore about Krish's background today?"
+    ];
+
+    let idx = 0;
+    const fetchNext = async () => {
+      if (idx >= keyPhrases.length) return;
+      const phrase = keyPhrases[idx];
+      idx++;
+      const cacheKey = phrase.trim().toLowerCase();
+      if (!AUDIO_BLOB_CACHE.has(cacheKey)) {
+        try {
+          const res = await fetch(`${apiBase}/api/tts?voice=sarah&text=${encodeURIComponent(phrase)}`);
+          if (res.ok) {
+            const blob = await res.blob();
+            if (blob) AUDIO_BLOB_CACHE.set(cacheKey, blob);
+          }
+        } catch (e) {}
+      }
+      setTimeout(fetchNext, 300);
+    };
+
+    setTimeout(fetchNext, 800);
   }
 
   speakCurrentDialogue() {
@@ -327,13 +374,21 @@ class ConversationalAssistant {
 
     this._isSpeakingQueue = true;
 
-    // Helper: Fetches audio blob for a sentence
+    // Helper: Fetches audio blob with in-memory caching for 0ms startup
     const fetchBlob = async (text) => {
+      const cacheKey = text.trim().toLowerCase();
+      if (AUDIO_BLOB_CACHE.has(cacheKey)) {
+        return AUDIO_BLOB_CACHE.get(cacheKey);
+      }
       try {
         const url = `${apiBase}/api/tts?voice=sarah&text=${encodeURIComponent(text)}`;
         const res = await fetch(url, { signal: currentSignal });
         if (!res.ok) return null;
-        return await res.blob();
+        const blob = await res.blob();
+        if (blob) {
+          AUDIO_BLOB_CACHE.set(cacheKey, blob);
+        }
+        return blob;
       } catch (e) {
         return null;
       }
@@ -564,8 +619,11 @@ class ConversationalAssistant {
             this.queryInput.value = currentText;
           }
 
-          // Real-time silence detector (750ms natural pause triggers immediate answer)
+          // Adaptive fast silence detector: 260ms on final tokens, 400ms on interim
           if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
+          const hasFinal = event.results[event.results.length - 1]?.isFinal;
+          const waitTime = hasFinal ? 260 : 400;
+
           if (currentText.length > 2) {
             this.speechSilenceTimer = setTimeout(() => {
               const fullQuery = (this.queryInput ? this.queryInput.value : currentText).trim();
@@ -584,7 +642,7 @@ class ConversationalAssistant {
                   }
                 });
               }
-            }, 420);
+            }, waitTime);
           }
         };
 
