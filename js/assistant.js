@@ -560,7 +560,6 @@ class ConversationalAssistant {
     let audioChunks = [];
     let mediaRecorder = null;
     let isTranscribingAudio = false;
-    const NOISE_GATE_THRESHOLD = 0.005; // Sensitive to natural speaking voice
 
     const startAudioRecording = (stream) => {
       try {
@@ -593,7 +592,7 @@ class ConversationalAssistant {
           const audioBlob = new Blob(audioChunks, { type: currentMime });
           audioChunks = [];
           
-          if (audioBlob.size < 300) {
+          if (audioBlob.size < 200) {
             isTranscribingAudio = false;
             if (this.isLiveVoiceMode && !this.isSpeaking && this.micStream) {
               startAudioRecording(this.micStream);
@@ -624,6 +623,7 @@ class ConversationalAssistant {
               if (directRes.ok) {
                 const directData = await directRes.json();
                 spokenText = directData.text?.trim() || '';
+                console.log('🎙️ Groq Whisper Direct Result:', spokenText);
               }
             } catch (directErr) {
               console.warn('Direct Groq Whisper notice:', directErr);
@@ -644,6 +644,7 @@ class ConversationalAssistant {
               if (res.ok) {
                 const data = await res.json();
                 spokenText = data.text?.trim() || '';
+                console.log('🎙️ Backend Whisper STT Result:', spokenText);
               }
             } catch (backendErr) {
               console.warn('Backend STT notice:', backendErr);
@@ -652,7 +653,8 @@ class ConversationalAssistant {
 
           if (spokenText && spokenText.length > 1 && !spokenText.toLowerCase().includes('thank you.')) {
             if (this.queryInput) this.queryInput.value = spokenText;
-            updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
+            updateHud('thinking', `🧠 Answering: "${spokenText.length > 25 ? spokenText.slice(0, 25) + '...' : spokenText}"`);
+            window.showToast?.(`🎙️ "${spokenText}"`);
             this.handleUserQuestion(spokenText, () => {
               isTranscribingAudio = false;
               if (this.isLiveVoiceMode && !this.isSpeaking && this.micStream) {
@@ -699,42 +701,22 @@ class ConversationalAssistant {
 
         startAudioRecording(stream);
 
-        const vuBars = document.querySelectorAll('.live-voice-bars span');
-        const timeData = new Uint8Array(this.micAnalyser.fftSize);
+        const vuBars = document.querySelectorAll('#liveVoiceVu .vu-bar');
         const freqData = new Uint8Array(this.micAnalyser.frequencyBinCount);
         let silenceCount = 0;
 
         const renderVu = () => {
           if (!this.isLiveVoiceMode || !this.micAnalyser) return;
           
-          // 1. Calculate real-time RMS energy for Voice Activity Detection
-          this.micAnalyser.getByteTimeDomainData(timeData);
-          let sumSquares = 0;
-          for (let i = 0; i < timeData.length; i++) {
-            const amplitude = (timeData[i] - 128) / 128;
-            sumSquares += amplitude * amplitude;
-          }
-          const rms = Math.sqrt(sumSquares / timeData.length);
-          
-          if (rms > NOISE_GATE_THRESHOLD) {
-            voiceEnergyDetected = true;
-            silenceCount = 0;
-            updateHud('listening', '🎙️ Voice Detected: Listening...');
-          } else if (voiceEnergyDetected) {
-            silenceCount++;
-            // When voice stops for ~300ms, immediately finalize recording and transcribe
-            if (silenceCount > 16 && !isTranscribingAudio && !this.isSpeaking) {
-              voiceEnergyDetected = false;
-              silenceCount = 0;
-              const currentInput = this.queryInput ? this.queryInput.value.trim() : '';
-              if (!currentInput || currentInput.length < 2) {
-                stopAndTranscribeAudio();
-              }
-            }
-          }
-
-          // 2. Animate VU Bars
+          // 1. Calculate real-time frequency energy for Voice Activity Detection
           this.micAnalyser.getByteFrequencyData(freqData);
+          let sumVol = 0;
+          for (let i = 0; i < freqData.length; i++) {
+            sumVol += freqData[i];
+          }
+          const avgVol = sumVol / freqData.length;
+
+          // Animate VU Bars on HUD
           if (vuBars && vuBars.length > 0) {
             vuBars.forEach((bar, idx) => {
               const val = freqData[idx % freqData.length] || 0;
@@ -742,6 +724,21 @@ class ConversationalAssistant {
               bar.style.height = `${h}px`;
             });
           }
+          
+          if (avgVol > 2.0) {
+            voiceEnergyDetected = true;
+            silenceCount = 0;
+            updateHud('listening', '🎙️ Hearing your voice... (Speak freely)');
+          } else if (voiceEnergyDetected) {
+            silenceCount++;
+            // When voice stops for ~350ms, finalize recording and transcribe
+            if (silenceCount > 18 && !isTranscribingAudio && !this.isSpeaking) {
+              voiceEnergyDetected = false;
+              silenceCount = 0;
+              stopAndTranscribeAudio();
+            }
+          }
+
           this.micAnimFrame = requestAnimationFrame(renderVu);
         };
         renderVu();
@@ -759,15 +756,17 @@ class ConversationalAssistant {
         try { this.micAudioContext.close(); } catch (e) {}
         this.micAudioContext = null;
       }
-      if (this.micStream) {
-        try {
-          this.micStream.getTracks().forEach(t => t.stop());
-          this.micStream = null;
-        } catch (e) {}
-      }
+      setTimeout(() => {
+        if (!this.isLiveVoiceMode && this.micStream) {
+          try {
+            this.micStream.getTracks().forEach(t => t.stop());
+            this.micStream = null;
+          } catch (e) {}
+        }
+      }, 500);
       this.micAnalyser = null;
       voiceEnergyDetected = false;
-      const vuBars = document.querySelectorAll('.live-voice-bars span');
+      const vuBars = document.querySelectorAll('#liveVoiceVu .vu-bar');
       if (vuBars) {
         vuBars.forEach(b => b.style.height = '');
       }
