@@ -12,7 +12,7 @@ export const RESUME_DATA = {
   socials: {
     github: "https://github.com/Krishr21",
     linkedin: "https://www.linkedin.com/in/krishruparel21/",
-    portfolio: "https://krishruparel.dev"
+    portfolio: "https://portfolio-beta-one-nj2dqxay0f.vercel.app"
   },
   status: "Available for Fall 2026 & Spring 2027 Roles",
   education: [

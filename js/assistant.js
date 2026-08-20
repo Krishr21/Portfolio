@@ -297,55 +297,6 @@ class ConversationalAssistant {
     // Stop any currently playing audio
     this.stopAllSpeech();
 
-    // Fallback: Web Speech Synthesis (natural browser voice)
-    const fallbackWebSpeech = () => {
-      if (!('speechSynthesis' in window)) {
-        this._isSpeakingQueue = false;
-        if (this.avatar3D) this.avatar3D.stopSpeaking();
-        audioVis.setSpeaking(false);
-        if (onComplete) onComplete();
-        return;
-      }
-      try {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.rate = 1.02;
-        utterance.pitch = 1.04;
-
-        // Select the most natural female/English voice available
-        const voices = window.speechSynthesis.getVoices();
-        const preferredVoice = voices.find(v => 
-          (v.name.includes('Samantha') || v.name.includes('Victoria') || v.name.includes('Karen') || v.name.includes('Google US English') || v.name.includes('Zira') || v.name.includes('Natural') || v.name.includes('Female')) && v.lang.startsWith('en')
-        ) || voices.find(v => v.lang.startsWith('en'));
-        if (preferredVoice) utterance.voice = preferredVoice;
-
-        utterance.onstart = () => {
-          if (this.avatar3D) this.avatar3D.startSpeaking();
-          audioVis.setSpeaking(true);
-        };
-        utterance.onend = () => {
-          this._isSpeakingQueue = false;
-          if (this.avatar3D) this.avatar3D.stopSpeaking();
-          audioVis.setSpeaking(false);
-          if (onComplete) onComplete();
-        };
-        utterance.onerror = () => {
-          this._isSpeakingQueue = false;
-          if (this.avatar3D) this.avatar3D.stopSpeaking();
-          audioVis.setSpeaking(false);
-          if (onComplete) onComplete();
-        };
-
-        window.speechSynthesis.speak(utterance);
-      } catch (err) {
-        console.warn('SpeechSynthesis error:', err);
-        this._isSpeakingQueue = false;
-        if (this.avatar3D) this.avatar3D.stopSpeaking();
-        audioVis.setSpeaking(false);
-        if (onComplete) onComplete();
-      }
-    };
-
     // Split text into natural sentence chunks (max 130 chars each) for Speechmatics
     const rawChunks = cleanText.match(/[^.!?]+[.!?]+|\S+/g) || [cleanText];
     const sentenceChunks = [];
@@ -404,22 +355,32 @@ class ConversationalAssistant {
           playNextChunk();
         };
 
-        audio.onerror = () => {
-          // If Speechmatics fails, fallback to natural Web Speech API
+        audio.onerror = (err) => {
+          console.warn('Speechmatics TTS stream notice:', err);
           this._isSpeakingQueue = false;
-          fallbackWebSpeech();
+          if (this.avatar3D) this.avatar3D.stopSpeaking();
+          audioVis.setSpeaking(false);
+          this._currentAudio = null;
+          if (onComplete) onComplete();
         };
 
         const playPromise = audio.play();
         if (playPromise !== undefined) {
-          playPromise.catch(() => {
+          playPromise.catch((err) => {
+            console.warn('Speechmatics TTS play notice:', err);
             this._isSpeakingQueue = false;
-            fallbackWebSpeech();
+            if (this.avatar3D) this.avatar3D.stopSpeaking();
+            audioVis.setSpeaking(false);
+            this._currentAudio = null;
+            if (onComplete) onComplete();
           });
         }
       } catch (e) {
         this._isSpeakingQueue = false;
-        fallbackWebSpeech();
+        if (this.avatar3D) this.avatar3D.stopSpeaking();
+        audioVis.setSpeaking(false);
+        this._currentAudio = null;
+        if (onComplete) onComplete();
       }
     };
 
@@ -444,11 +405,6 @@ class ConversationalAssistant {
         this._currentAudio.currentTime = 0;
       } catch (e) {}
       this._currentAudio = null;
-    }
-    if ('speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch (e) {}
     }
     if (this.avatar3D) this.avatar3D.stopSpeaking();
     audioVis.setSpeaking(false);

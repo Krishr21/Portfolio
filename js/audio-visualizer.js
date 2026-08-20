@@ -89,9 +89,6 @@ class AudioVisualizerEngine {
             window.assistantEngine._currentAudio = null;
           } catch (e) {}
         }
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-        }
         if (window.assistantEngine && window.assistantEngine.avatar3D) {
           window.assistantEngine.avatar3D.stopSpeaking();
         }
