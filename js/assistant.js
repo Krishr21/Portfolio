@@ -349,51 +349,84 @@ class ConversationalAssistant {
     const hud = document.getElementById('liveVoiceHud');
     const hudStatus = document.getElementById('liveVoiceStatusText');
     if (hud && hud.style.display !== 'none' && hudStatus) {
-      hudStatus.textContent = '🔊 K.R.I.S.H. Speaking...';
+      hudStatus.textContent = '🔊 K.R.I.S.H. Speaking (Speechmatics Sarah)...';
     }
 
-    if ('speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(cleanText);
-        utter.rate = 1.05;
-        utter.pitch = 1.0;
+    const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
+    const speechmaticsUrl = `${apiBase}/api/tts?voice=sarah&text=${encodeURIComponent(cleanText)}`;
 
-        const voices = window.speechSynthesis.getVoices();
-        const preferredVoice = voices.find(v => (
-          v.name.includes('Samantha') || 
-          v.name.includes('Google UK English Female') || 
-          v.name.includes('Natural') || 
-          v.name.includes('Zira') || 
-          v.name.includes('Karen') ||
-          (v.lang.startsWith('en') && v.name.toLowerCase().includes('female'))
-        )) || voices.find(v => v.lang.startsWith('en'));
+    let hasStarted = false;
 
-        if (preferredVoice) utter.voice = preferredVoice;
+    const playBrowserSpeechFallback = () => {
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.resume();
+          const utter = new SpeechSynthesisUtterance(cleanText);
+          utter.rate = 1.04;
+          utter.pitch = 1.0;
 
-        utter.onstart = () => {
-          if (this.avatar3D) this.avatar3D.startSpeaking();
-          audioVis.setSpeaking(true);
-        };
+          const voices = window.speechSynthesis.getVoices();
+          const preferredVoice = voices.find(v => (
+            v.name.includes('Samantha') || 
+            v.name.includes('Google UK English Female') || 
+            v.name.includes('Natural') || 
+            v.name.includes('Zira') || 
+            v.name.includes('Karen') ||
+            (v.lang.startsWith('en') && v.name.toLowerCase().includes('female'))
+          )) || voices.find(v => v.lang.startsWith('en'));
 
-        utter.onend = () => {
-          this.stopAllSpeech();
-          if (onComplete) onComplete();
-        };
+          if (preferredVoice) utter.voice = preferredVoice;
 
-        utter.onerror = () => {
-          this.stopAllSpeech();
-          if (onComplete) onComplete();
-        };
+          utter.onstart = () => {
+            if (this.avatar3D) this.avatar3D.startSpeaking();
+            audioVis.setSpeaking(true);
+          };
 
-        window.speechSynthesis.speak(utter);
-        return;
-      } catch (err) {
-        console.warn('Speech synthesis notice:', err);
+          utter.onend = () => {
+            this.stopAllSpeech();
+            if (onComplete) onComplete();
+          };
+
+          utter.onerror = () => {
+            this.stopAllSpeech();
+            if (onComplete) onComplete();
+          };
+
+          window.speechSynthesis.speak(utter);
+          return;
+        } catch (err) {
+          console.warn('Speech synthesis notice:', err);
+        }
       }
-    }
+      if (onComplete) onComplete();
+    };
 
-    if (onComplete) onComplete();
+    try {
+      const audio = new Audio(speechmaticsUrl);
+      this._currentAudio = audio;
+
+      audio.onplay = () => {
+        hasStarted = true;
+        if (this.avatar3D) this.avatar3D.startSpeaking();
+        audioVis.setSpeaking(true);
+      };
+
+      audio.onended = () => {
+        this.stopAllSpeech();
+        if (onComplete) onComplete();
+      };
+
+      audio.onerror = () => {
+        if (!hasStarted) playBrowserSpeechFallback();
+      };
+
+      audio.play().catch(() => {
+        if (!hasStarted) playBrowserSpeechFallback();
+      });
+    } catch (e) {
+      playBrowserSpeechFallback();
+    }
   }
 
   stopAudio() {
