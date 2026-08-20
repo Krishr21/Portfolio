@@ -271,8 +271,12 @@ class ConversationalAssistant {
 
   // --- Neural Studio High-Fidelity Female Voice Synthesizer ---
   // --- Exclusive Speechmatics Studio Neural Female Voice Synthesizer ---
-  speakText(plainText) {
-    if (!plainText) return;
+  // --- Real-Time Voice Synthesizer & Speech Engine ---
+  speakText(plainText, onComplete = null) {
+    if (!plainText) {
+      if (onComplete) onComplete();
+      return;
+    }
 
     // Clean text of HTML, entities, and markdown symbols
     const cleanText = plainText
@@ -285,23 +289,27 @@ class ConversationalAssistant {
       .replace(/\s+/g, ' ')
       .trim();
 
-    if (!cleanText) return;
+    if (!cleanText) {
+      if (onComplete) onComplete();
+      return;
+    }
 
     // Stop any currently playing audio
     this.stopAllSpeech();
 
-    // Fallback: Web Speech Synthesis (natural browser voice)
+    // Fallback: Web Speech Synthesis (natural browser voice with 0ms latency)
     const fallbackWebSpeech = () => {
       if (!('speechSynthesis' in window)) {
         this._isSpeakingQueue = false;
         if (this.avatar3D) this.avatar3D.stopSpeaking();
         audioVis.setSpeaking(false);
+        if (onComplete) onComplete();
         return;
       }
       try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.rate = 1.04;
+        utterance.rate = 1.05;
         utterance.pitch = 1.05;
 
         // Select the most natural female/English voice available
@@ -319,11 +327,13 @@ class ConversationalAssistant {
           this._isSpeakingQueue = false;
           if (this.avatar3D) this.avatar3D.stopSpeaking();
           audioVis.setSpeaking(false);
+          if (onComplete) onComplete();
         };
         utterance.onerror = () => {
           this._isSpeakingQueue = false;
           if (this.avatar3D) this.avatar3D.stopSpeaking();
           audioVis.setSpeaking(false);
+          if (onComplete) onComplete();
         };
 
         window.speechSynthesis.speak(utterance);
@@ -332,82 +342,12 @@ class ConversationalAssistant {
         this._isSpeakingQueue = false;
         if (this.avatar3D) this.avatar3D.stopSpeaking();
         audioVis.setSpeaking(false);
+        if (onComplete) onComplete();
       }
     };
 
-    // Split text into natural sentence chunks
-    const rawChunks = cleanText.match(/[^.!?]+[.!?]+|\S+/g) || [cleanText];
-    const sentenceChunks = [];
-    let currentChunk = "";
-
-    for (const chunk of rawChunks) {
-      if ((currentChunk + " " + chunk).length < 130) {
-        currentChunk = currentChunk ? (currentChunk + " " + chunk) : chunk;
-      } else {
-        if (currentChunk) sentenceChunks.push(currentChunk.trim());
-        currentChunk = chunk;
-      }
-    }
-    if (currentChunk) sentenceChunks.push(currentChunk.trim());
-
-    if (sentenceChunks.length === 0) return;
-
-    // Sequential Speechmatics Audio Queue
-    let currentIdx = 0;
-    this._isSpeakingQueue = true;
-
-    const playNextChunk = () => {
-      if (!this._isSpeakingQueue || currentIdx >= sentenceChunks.length) {
-        this._isSpeakingQueue = false;
-        if (this.avatar3D) this.avatar3D.stopSpeaking();
-        audioVis.setSpeaking(false);
-        this._currentAudio = null;
-        return;
-      }
-
-      const chunkText = sentenceChunks[currentIdx];
-      currentIdx++;
-
-      try {
-        const speechmaticsUrl = `${API_BASE}/api/tts?voice=sarah&text=${encodeURIComponent(chunkText)}`;
-        const audio = new Audio(speechmaticsUrl);
-        this._currentAudio = audio;
-
-        // Preload next chunk in background for zero-gap playback
-        if (currentIdx < sentenceChunks.length) {
-          const nextSmUrl = `${API_BASE}/api/tts?voice=sarah&text=${encodeURIComponent(sentenceChunks[currentIdx])}`;
-          const preloadAudio = new Audio(nextSmUrl);
-          preloadAudio.preload = 'auto';
-        }
-
-        audio.onplay = () => {
-          if (this.avatar3D) this.avatar3D.startSpeaking();
-          audioVis.setSpeaking(true);
-        };
-
-        audio.onended = () => {
-          playNextChunk();
-        };
-
-        audio.onerror = () => {
-          this._isSpeakingQueue = false;
-          fallbackWebSpeech();
-        };
-
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            this._isSpeakingQueue = false;
-            fallbackWebSpeech();
-          });
-        }
-      } catch (e) {
-        this._isSpeakingQueue = false;
-        fallbackWebSpeech();
-      }
-    };
-
-    playNextChunk();
+    // Instant zero-latency synthesis via WebSpeech
+    fallbackWebSpeech();
   }
 
   stopAudio() {
@@ -439,6 +379,7 @@ class ConversationalAssistant {
   }
 
   // --- Real-Time Live Voice Assistant Engine (Duplex & Streaming) ---
+  // --- Real-Time Live Voice Assistant Engine (Instantaneous Zero-Latency Streaming) ---
   initSpeechRecognition() {
     this.isLiveVoiceMode = false;
     this.speechSilenceTimer = null;
@@ -481,7 +422,7 @@ class ConversationalAssistant {
         const source = this.micAudioContext.createMediaStreamSource(stream);
         this.micAnalyser = this.micAudioContext.createAnalyser();
         this.micAnalyser.fftSize = 64;
-        this.micAnalyser.smoothingTimeConstant = 0.5;
+        this.micAnalyser.smoothingTimeConstant = 0.4;
         source.connect(this.micAnalyser);
 
         const vuBars = document.querySelectorAll('.live-voice-bars span');
@@ -493,7 +434,7 @@ class ConversationalAssistant {
           if (vuBars && vuBars.length > 0) {
             vuBars.forEach((bar, idx) => {
               const val = dataArray[idx % dataArray.length] || 0;
-              const h = Math.min(22, Math.max(4, (val / 255) * 24));
+              const h = Math.min(24, Math.max(4, (val / 255) * 26));
               bar.style.height = `${h}px`;
             });
           }
@@ -523,11 +464,11 @@ class ConversationalAssistant {
 
     const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    const setupRecognition = (isContinuous = false) => {
+    const setupRecognition = () => {
       if (!SpeechRecognitionClass) return null;
       try {
         const sr = new SpeechRecognitionClass();
-        sr.continuous = isContinuous;
+        sr.continuous = true;
         sr.interimResults = true;
         sr.lang = 'en-US';
 
@@ -540,28 +481,32 @@ class ConversationalAssistant {
           if (this.queryInput) {
             this.queryInput.placeholder = '🎙️ Listening... Speak naturally';
           }
-          updateHud('listening', '🎙️ Listening... Speak naturally');
+          updateHud('listening', '🎙️ Live Voice: Listening in Real-Time...');
           audioVis.playChime();
         };
 
         sr.onresult = (event) => {
-          let interimTranscript = '';
-          let finalTranscript = '';
+          // Barge-in: immediately cancel speech if user starts talking
+          this.stopAllSpeech();
 
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript;
+          let finalTranscript = '';
+          let interimTranscript = '';
+
+          for (let i = 0; i < event.results.length; ++i) {
+            const res = event.results[i];
+            if (res.isFinal) {
+              finalTranscript += res[0].transcript + ' ';
             } else {
-              interimTranscript += event.results[i][0].transcript;
+              interimTranscript += res[0].transcript;
             }
           }
 
-          const currentText = (finalTranscript || interimTranscript).trim();
+          const currentText = (finalTranscript + interimTranscript).trim();
           if (currentText && this.queryInput) {
             this.queryInput.value = currentText;
           }
 
-          // Natural silence debounce (1100ms pause indicates end of question)
+          // Real-time silence detector (750ms natural pause triggers immediate answer)
           if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
           if (currentText.length > 2) {
             this.speechSilenceTimer = setTimeout(() => {
@@ -570,9 +515,18 @@ class ConversationalAssistant {
                 updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
                 try { sr.stop(); } catch (e) {}
                 stopMicAnalyser();
-                this.handleUserQuestion(fullQuery);
+                this.handleUserQuestion(fullQuery, () => {
+                  // After speaking answer, if still in Live Voice mode, seamlessly resume listening
+                  if (this.isLiveVoiceMode) {
+                    if (this.queryInput) this.queryInput.value = '';
+                    try {
+                      sr.start();
+                      if (this.micStream) startMicAnalyser(this.micStream);
+                    } catch (e) {}
+                  }
+                });
               }
-            }, 1100);
+            }, 750);
           }
         };
 
@@ -591,27 +545,17 @@ class ConversationalAssistant {
           if (e.error === 'not-allowed') {
             updateHud('error', '⚠️ Microphone access blocked. Please allow mic in browser URL bar.');
             window.showToast?.('⚠️ Microphone access blocked. Please allow microphone in browser URL bar.');
-          } else if (e.error === 'network' || e.error === 'service-not-allowed') {
-            updateHud('error', '🎙️ Live Voice unavailable. Tap any suggested prompt below!');
           }
         };
 
         sr.onend = () => {
           this.isListening = false;
           stopMicAnalyser();
-          if (this.micBtn) this.micBtn.classList.remove('recording');
-          if (this.queryInput) {
-            this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
-            // Auto-submit on speech end if question was spoken
-            const pendingQuery = this.queryInput.value.trim();
-            if (pendingQuery.length > 2 && this.isLiveVoiceMode) {
-              this.isLiveVoiceMode = false;
-              updateHud('thinking', '🧠 K.R.I.S.H. Synthesizing Answer...');
-              this.handleUserQuestion(pendingQuery);
-              return;
-            }
-          }
           if (!this.isLiveVoiceMode) {
+            if (this.micBtn) this.micBtn.classList.remove('recording');
+            if (this.queryInput) {
+              this.queryInput.placeholder = 'Ask me anything: RAG stack, GPA, IEEE paper, hiring...';
+            }
             updateHud('hidden');
           }
         };
@@ -623,7 +567,7 @@ class ConversationalAssistant {
       }
     };
 
-    this.speechRecognition = setupRecognition(false);
+    this.speechRecognition = setupRecognition();
 
     if (this.micBtn) {
       this.micBtn.addEventListener('click', async () => {
@@ -632,18 +576,12 @@ class ConversationalAssistant {
           audioVis.toggleSound();
         }
 
-        if (this.isListening || this.isLiveVoiceMode || this.isLiveKitConnected) {
+        if (this.isListening || this.isLiveVoiceMode) {
           // Toggle off
           this.isLiveVoiceMode = false;
           this.isListening = false;
           if (this.speechSilenceTimer) clearTimeout(this.speechSilenceTimer);
           if (this.micBtn) this.micBtn.classList.remove('recording');
-          if (this.isLiveKitConnected && this.livekitRoom) {
-            try {
-              await this.livekitRoom.disconnect();
-              this.isLiveKitConnected = false;
-            } catch (e) {}
-          }
           if (this.speechRecognition) {
             try { this.speechRecognition.stop(); } catch (e) {}
           }
@@ -661,7 +599,7 @@ class ConversationalAssistant {
           this.stopAllSpeech();
           this.isLiveVoiceMode = true;
           if (this.micBtn) this.micBtn.classList.add('recording');
-          updateHud('listening', '🎙️ Requesting microphone access...');
+          updateHud('listening', '🎙️ Live Voice: Listening in Real-Time...');
 
           // 1. Proactively request hardware microphone permission
           try {
@@ -678,29 +616,13 @@ class ConversationalAssistant {
             return;
           }
 
-          // 2. Try connecting to LiveKit + Speechmatics WebRTC server if online
-          updateHud('listening', '🎙️ Connecting voice stream...');
-          const connectedLiveKit = await this.connectLiveKit(updateHud);
-
-          if (connectedLiveKit) {
-            if (this.micBtn) {
-              this.micBtn.classList.add('recording');
-              this.micBtn.title = 'LiveKit Voice Mode: Active (Click to stop)';
-            }
-            if (this.queryInput) {
-              this.queryInput.placeholder = '🎙️ Real-Time WebRTC Voice Active... Speak naturally';
-            }
-            updateHud('listening', '🔴 LiveKit + Speechmatics: Live WebRTC Streaming');
-            window.showToast?.('🎙️ Connected to Speechmatics & LiveKit Voice Agent');
-            return;
-          }
-
-          // 3. In-browser realtime speech recognition fallback
+          // 2. Start streaming recognition immediately (0ms delay)
           if (!this.speechRecognition) {
-            this.speechRecognition = setupRecognition(false);
+            this.speechRecognition = setupRecognition();
           }
 
           if (this.speechRecognition) {
+            if (this.queryInput) this.queryInput.value = '';
             try {
               this.speechRecognition.start();
             } catch (e) {
@@ -709,7 +631,7 @@ class ConversationalAssistant {
                 this.speechRecognition.stop();
                 setTimeout(() => {
                   if (this.speechRecognition) this.speechRecognition.start();
-                }, 150);
+                }, 50);
               } catch (retryErr) {}
             }
           } else {
@@ -849,7 +771,7 @@ class ConversationalAssistant {
   }
 
   // --- Intelligent Knowledge Base & AI NLP Conversational Engine ---
-  handleUserQuestion(queryText) {
+  handleUserQuestion(queryText, onSpoken = null) {
     if (!queryText) return;
     const rawQ = queryText.trim();
     const q = rawQ.toLowerCase();
@@ -1115,7 +1037,9 @@ class ConversationalAssistant {
     });
 
     if (audioVis.soundEnabled) {
-      this.speakText(plainSpeech);
+      this.speakText(plainSpeech, onSpoken);
+    } else {
+      if (onSpoken) onSpoken();
     }
   }
 
