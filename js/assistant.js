@@ -555,17 +555,17 @@ class ConversationalAssistant {
     };
 
     const stopAndTranscribeAudio = () => {
-      if (isTranscribingAudio || this.isSpeaking || !mediaRecorder || mediaRecorder.state === 'inactive') return;
+      if (isTranscribingAudio || this.isSpeaking || !mediaRecorder) return;
       
       try {
         isTranscribingAudio = true;
         const currentMime = mediaRecorder.mimeType || 'audio/webm';
         
-        mediaRecorder.onstop = async () => {
+        const processAudioChunks = async () => {
           const audioBlob = new Blob(audioChunks, { type: currentMime });
           audioChunks = [];
           
-          if (audioBlob.size < 400) {
+          if (audioBlob.size < 300) {
             isTranscribingAudio = false;
             if (this.isLiveVoiceMode && !this.isSpeaking && this.micStream) {
               startAudioRecording(this.micStream);
@@ -640,8 +640,12 @@ class ConversationalAssistant {
           }
         };
 
-        // Stop the recorder to cleanly finalize audio container & flush chunks
-        mediaRecorder.stop();
+        if (mediaRecorder.state !== 'inactive') {
+          mediaRecorder.onstop = processAudioChunks;
+          mediaRecorder.stop();
+        } else {
+          processAudioChunks();
+        }
       } catch (err) {
         console.warn('Whisper STT processing notice:', err);
         isTranscribingAudio = false;
@@ -673,7 +677,7 @@ class ConversationalAssistant {
         let silenceCount = 0;
 
         const renderVu = () => {
-          if (!this.isListening || !this.micAnalyser) return;
+          if (!this.isLiveVoiceMode || !this.micAnalyser) return;
           
           // 1. Calculate real-time RMS energy for Voice Activity Detection
           this.micAnalyser.getByteTimeDomainData(timeData);
@@ -723,11 +727,6 @@ class ConversationalAssistant {
         cancelAnimationFrame(this.micAnimFrame);
         this.micAnimFrame = null;
       }
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        try { mediaRecorder.stop(); } catch (e) {}
-      }
-      mediaRecorder = null;
-      audioChunks = [];
       if (this.micAudioContext) {
         try { this.micAudioContext.close(); } catch (e) {}
         this.micAudioContext = null;
