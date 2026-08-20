@@ -562,39 +562,73 @@ class ConversationalAssistant {
         const audioBlob = new Blob(audioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
         audioChunks = [];
         
-        if (audioBlob.size < 2500) {
+        if (audioBlob.size < 2000) {
           isTranscribingAudio = false;
           return; // Too short / ambient murmur
         }
 
-        const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
-        
-        const formData = new FormData();
-        formData.append('file', audioBlob, 'voice.webm');
-
         updateHud('thinking', '🧠 Whisper Transcribing Voice...');
-        const res = await fetch(`${apiBase}/api/stt`, {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          const spokenText = data.text?.trim();
-          if (spokenText && spokenText.length > 1 && !spokenText.toLowerCase().includes('thank you.')) {
-            if (this.queryInput) this.queryInput.value = spokenText;
-            this.handleUserQuestion(spokenText, () => {
-              isTranscribingAudio = false;
-              if (this.isLiveVoiceMode && !this.isSpeaking) {
-                if (this.queryInput) this.queryInput.value = '';
-                if (this.micStream) startAudioRecording(this.micStream);
-              }
+
+        let spokenText = '';
+        const clientGroqKey = window.GROQ_API_KEY || sessionStorage.getItem('GROQ_API_KEY') || "";
+
+        // 1. If client key provided, call Groq Whisper API directly
+        if (clientGroqKey) {
+          try {
+            const directForm = new FormData();
+            directForm.append('file', audioBlob, 'voice.webm');
+            directForm.append('model', 'whisper-large-v3-turbo');
+            directForm.append('language', 'en');
+
+            const directRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${clientGroqKey}` },
+              body: directForm
             });
-            return;
+
+            if (directRes.ok) {
+              const directData = await directRes.json();
+              spokenText = directData.text?.trim() || '';
+            }
+          } catch (directErr) {
+            console.warn('Direct Groq Whisper notice:', directErr);
           }
         }
+
+        // 2. Call secure backend /api/stt
+        if (!spokenText) {
+          try {
+            const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
+            const formData = new FormData();
+            formData.append('file', audioBlob, 'voice.webm');
+
+            const res = await fetch(`${apiBase}/api/stt`, {
+              method: 'POST',
+              body: formData
+            });
+            
+            if (res.ok) {
+              const data = await res.json();
+              spokenText = data.text?.trim() || '';
+            }
+          } catch (backendErr) {
+            console.warn('Backend STT notice:', backendErr);
+          }
+        }
+
+        if (spokenText && spokenText.length > 1 && !spokenText.toLowerCase().includes('thank you.')) {
+          if (this.queryInput) this.queryInput.value = spokenText;
+          this.handleUserQuestion(spokenText, () => {
+            isTranscribingAudio = false;
+            if (this.isLiveVoiceMode && !this.isSpeaking) {
+              if (this.queryInput) this.queryInput.value = '';
+              if (this.micStream) startAudioRecording(this.micStream);
+            }
+          });
+          return;
+        }
       } catch (err) {
-        console.warn('Whisper STT request notice:', err);
+        console.warn('Whisper STT processing notice:', err);
       } finally {
         isTranscribingAudio = false;
       }
@@ -1296,12 +1330,11 @@ class ConversationalAssistant {
       ];
     }
 
-    // 17. FREE GENERATIVE AI INTELLIGENCE (Google Gemini 2.0 / Groq Llama 3.3 Free Tier)
+    // 17. FREE GENERATIVE AI INTELLIGENCE (Direct Groq LPU + Backend Fallback)
     else {
       gesture = 'salute';
       if (this.avatar3D) this.avatar3D.playSalute();
 
-      // Show immediate intelligent thinking indicator
       if (this.speechEl) {
         this.speechEl.innerHTML = `🧠 <em class="typing-cursor">K.R.I.S.H. Synthesizing Answer...</em>`;
       }
@@ -1309,41 +1342,72 @@ class ConversationalAssistant {
         this.choicesEl.innerHTML = '';
       }
 
-      const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
+      const clientGroqKey = window.GROQ_API_KEY || sessionStorage.getItem('GROQ_API_KEY') || "";
+      const systemContext = "You are K.R.I.S.H., the 3D conversational AI Host for Krish Ruparel's portfolio. Speak in a warm, articulate, punchy tone (1-2 sentences). Krish has an MS CS from UT Arlington (3.84 GPA), built VisionVault (multimodal video RAG), OrchestrAI (FastAPI + Redis deterministic replay), and Solace distributed event streaming (+30% throughput).";
 
-      fetch(`${apiBase}/api/chat?q=${encodeURIComponent(rawQ)}`)
-        .then(res => res.json())
-        .then(data => {
-          const aiText = data.answer || `Regarding ${rawQ}: Krish Ruparel specializes in multimodal RAG pipelines, agent observability, and Solace distributed systems.`;
-          const formattedHtml = `💡 <strong>${rawQ}</strong><br><br>${aiText}`;
-          const followUps = [
-            { label: "⚡ Explore Featured Projects", target: "projects-intro", primary: true },
-            { label: "💼 Why Hire Krish?", target: "hire-intro" },
-            { label: "📜 View Full Resume", action: "open-resume-modal" },
-            { label: "⬅ Back to Start", target: "greeting" }
-          ];
+      const processAnswer = (aiText) => {
+        const formattedHtml = `💡 <strong>${rawQ}</strong><br><br>${aiText}`;
+        const followUps = [
+          { label: "⚡ Explore Featured Projects", target: "projects-intro", primary: true },
+          { label: "💼 Why Hire Krish?", target: "hire-intro" },
+          { label: "📜 View Full Resume", action: "open-resume-modal" },
+          { label: "⬅ Back to Start", target: "greeting" }
+        ];
 
-          this.typewrite(formattedHtml, () => {
-            this.renderChoices(followUps);
-          });
-
-          this.speakText(aiText, onSpoken);
-        })
-        .catch(err => {
-          console.warn('AI Chat fallback notice:', err);
-          const fallbackHtml = `💡 <em>"${rawQ}"</em><br><br>Krish Ruparel is an <strong>AI Engineer &amp; Distributed Systems Architect</strong> pursuing his MS CS at <strong>UT Arlington (3.84 GPA)</strong>. He specializes in <strong>multimodal RAG pipelines (VisionVault)</strong>, <strong>agent observability (OrchestrAI)</strong>, <strong>Solace event streaming (+30% throughput)</strong>, and published <strong>IEEE computer vision research</strong>.`;
-          const fallbackSpeech = `Regarding ${rawQ}: Krish Ruparel specializes in multimodal RAG pipelines, agent observability, high-throughput distributed systems, and published IEEE computer vision research.`;
-          
-          this.typewrite(fallbackHtml, () => {
-            this.renderChoices([
-              { label: "⚡ Explore Featured Projects", target: "projects-intro", primary: true },
-              { label: "💼 Why Hire Krish?", target: "hire-intro" },
-              { label: "📜 View Full Resume", action: "open-resume-modal" }
-            ]);
-          });
-
-          this.speakText(fallbackSpeech, onSpoken);
+        this.typewrite(formattedHtml, () => {
+          this.renderChoices(followUps);
         });
+
+        this.speakText(aiText, onSpoken);
+      };
+
+      const fallbackToBackendChat = () => {
+        const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
+        fetch(`${apiBase}/api/chat?q=${encodeURIComponent(rawQ)}`)
+          .then(res => res.json())
+          .then(data => {
+            const answer = data.answer || `Regarding ${rawQ}: Krish Ruparel specializes in multimodal RAG pipelines, agent observability, and Solace distributed systems.`;
+            processAnswer(answer);
+          })
+          .catch(() => {
+            const fallbackText = `Regarding ${rawQ}: Krish Ruparel specializes in multimodal RAG pipelines, agent observability, and Solace distributed systems (+30% throughput).`;
+            processAnswer(fallbackText);
+          });
+      };
+
+      if (clientGroqKey) {
+        fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${clientGroqKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'groq/compound',
+            messages: [
+              { role: 'system', content: systemContext },
+              { role: 'user', content: rawQ }
+            ],
+            max_tokens: 120,
+            temperature: 0.6
+          })
+        })
+        .then(res => {
+          if (!res.ok) throw new Error('Groq direct call failed');
+          return res.json();
+        })
+        .then(data => {
+          const answer = data.choices?.[0]?.message?.content?.trim();
+          if (answer) {
+            processAnswer(answer);
+          } else {
+            fallbackToBackendChat();
+          }
+        })
+        .catch(() => fallbackToBackendChat());
+      } else {
+        fallbackToBackendChat();
+      }
 
       return;
     }
