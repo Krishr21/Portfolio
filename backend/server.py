@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / ".env.local"
 load_dotenv(dotenv_path=env_path)
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from livekit import api
 from livekit import agents
@@ -92,7 +92,9 @@ async def stream_speechmatics_tts(text: str, voice: str = "sarah"):
     """Streams realistic female voice audio from Speechmatics directly as standard WAV format."""
     if not SPEECHMATICS_API_KEY:
         raise HTTPException(status_code=500, detail="SPEECHMATICS_API_KEY not configured")
-    if not text.strip():
+    
+    clean_text = text.replace("’", "'").replace("“", '"').replace("”", '"').replace("…", "...").strip()
+    if not clean_text:
         raise HTTPException(status_code=400, detail="Text parameter cannot be empty")
     
     # Valid female voices: 'sarah' or 'megan'
@@ -105,7 +107,7 @@ async def stream_speechmatics_tts(text: str, voice: str = "sarah"):
     
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, json={"text": text}, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+            async with session.post(url, json={"text": clean_text}, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
                 if resp.status != 200:
                     raise HTTPException(status_code=resp.status, detail="Speechmatics TTS synthesis failed")
                 pcm_data = await resp.read()

@@ -743,12 +743,14 @@ class ConversationalAssistant {
 
         let recognizedText = '';
         let processedThisTurn = false;
+        let hasNetworkError = false;
 
         sr.onstart = () => {
           this.isListening = true;
           recognizedText = '';
           processedThisTurn = false;
           voiceEnergyDetected = false;
+          hasNetworkError = false;
           if (this.micBtn) {
             this.micBtn.classList.add('recording');
             this.micBtn.title = 'Live Voice Mode: Active (Click to stop)';
@@ -793,7 +795,7 @@ class ConversationalAssistant {
                   if (this.isLiveVoiceMode && !this.isSpeaking) {
                     if (this.queryInput) this.queryInput.value = '';
                     setTimeout(() => {
-                      if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
+                      if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking && !hasNetworkError) {
                         try { sr.start(); } catch (e) {
                           this.speechRecognition = setupRecognition();
                           try { this.speechRecognition?.start(); } catch (err) {}
@@ -813,6 +815,7 @@ class ConversationalAssistant {
           }
 
           if (e.error === 'network') {
+            hasNetworkError = true;
             // Browser Web Speech API network drop: seamlessly capture audio via Whisper STT
             if (voiceEnergyDetected) {
               sendAudioForWhisperSTT();
@@ -843,7 +846,7 @@ class ConversationalAssistant {
                 if (this.isLiveVoiceMode && !this.isSpeaking) {
                   if (this.queryInput) this.queryInput.value = '';
                   setTimeout(() => {
-                    if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
+                    if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking && !hasNetworkError) {
                       try { sr.start(); } catch (err) {}
                     }
                   }, 250);
@@ -865,7 +868,7 @@ class ConversationalAssistant {
               if (this.isLiveVoiceMode && !this.isSpeaking) {
                 if (this.queryInput) this.queryInput.value = '';
                 setTimeout(() => {
-                  if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
+                  if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking && !hasNetworkError) {
                     try { sr.start(); } catch (e) {}
                   }
                 }, 250);
@@ -874,9 +877,9 @@ class ConversationalAssistant {
             return;
           }
 
-          if (this.isLiveVoiceMode && !this.isSpeaking) {
+          if (this.isLiveVoiceMode && !this.isSpeaking && !hasNetworkError) {
             setTimeout(() => {
-              if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking) {
+              if (this.isLiveVoiceMode && !this.isListening && !this.isSpeaking && !hasNetworkError) {
                 try {
                   sr.start();
                 } catch (e) {
@@ -884,7 +887,7 @@ class ConversationalAssistant {
                   try { this.speechRecognition?.start(); } catch (err) {}
                 }
               }
-            }, 250);
+            }, 400);
           } else if (!this.isLiveVoiceMode) {
             stopMicAnalyser();
             if (this.micBtn) this.micBtn.classList.remove('recording');
