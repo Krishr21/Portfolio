@@ -780,6 +780,28 @@ export class Assistant3DAvatar {
         this.previousMousePosition = { x: e.clientX, y: e.clientY };
       });
 
+      this.container.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches[0]) {
+          this.isDragging = true;
+          this.previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchmove', (e) => {
+        if (this.isDragging && e.touches && e.touches[0]) {
+          const deltaX = e.touches[0].clientX - this.previousMousePosition.x;
+          const deltaY = e.touches[0].clientY - this.previousMousePosition.y;
+          this.dragRotation.y += deltaX * 0.01;
+          this.dragRotation.x += deltaY * 0.01;
+          this.previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchend', () => {
+        this.isDragging = false;
+        this.dragRotation = { x: 0, y: 0 };
+      }, { passive: true });
+
       window.addEventListener('mouseup', () => {
         this.isDragging = false;
         this.dragRotation = { x: 0, y: 0 };

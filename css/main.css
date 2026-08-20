@@ -585,7 +585,50 @@ img, svg, video {
   .site-header {
     padding: 0 1rem;
   }
-  .brand-status-pill, .theme-switch-group, .sound-toggle-btn {
+  .brand-status-pill, .sound-toggle-btn {
+    display: none;
+  }
+  .header-center-nav {
+    padding: 0.2rem 0.3rem;
+  }
+  .mode-btn {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --header-height: 58px;
+  }
+  .site-header {
+    padding: 0 0.85rem;
+  }
+  .brand-logo {
+    font-size: 1.08rem;
+  }
+  .header-center-nav {
+    position: static;
+    transform: none;
+    padding: 0.15rem 0.25rem;
+    gap: 0.15rem;
+  }
+  .mode-btn {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.72rem;
+    gap: 0.25rem;
+  }
+  .mode-btn .badge-pill {
+    display: none;
+  }
+  .header-cmd-pill {
+    display: none;
+  }
+  .cta-header-btn {
+    padding: 0.32rem 0.7rem;
+    font-size: 0.74rem;
+  }
+  .theme-switch-group {
     display: none;
   }
 }

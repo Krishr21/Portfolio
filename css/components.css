@@ -280,25 +280,33 @@
   }
   .hero-section.hero-editorial-agency {
     padding: 2.5rem 0;
+    min-height: auto;
   }
 }
 
 @media (max-width: 600px) {
+  .hero-headline {
+    font-size: clamp(2.1rem, 7.8vw, 3rem);
+  }
   .hero-stats-row {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.85rem;
   }
-}
-
-@media (max-width: 900px) {
-  .hero-section {
-    height: auto;
-    min-height: calc(100vh - var(--header-height));
-    padding: 2rem 0;
+  .hero-stat-value {
+    font-size: clamp(1.45rem, 5.5vw, 1.85rem);
   }
-  .hero-bottom-grid {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
+  .hero-stat-label {
+    font-size: 0.7rem;
+  }
+  .hero-action-buttons {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.6rem;
+  }
+  .hero-action-buttons .btn-primary,
+  .hero-action-buttons .btn-secondary {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -2218,5 +2226,210 @@
     gap: 0.5rem;
     text-align: center;
     margin-top: 1.5rem;
+  }
+}
+
+/* ==========================================================================
+   COMPREHENSIVE RESPONSIVE ENHANCEMENTS: TABLETS (<= 1024px) & MOBILE (<= 768px / <= 480px)
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .editorial-section {
+    padding: 3.5rem 0 4rem 0;
+  }
+
+  .slide-header-block {
+    margin-bottom: 1.25rem;
+  }
+
+  .demo-lab-container {
+    border-radius: var(--radius-md);
+  }
+
+  .demo-tab-btn {
+    padding: 0.85rem 1.25rem;
+    font-size: 0.82rem;
+  }
+
+  .featured-projects-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .resume-modal-dialog {
+    max-width: 90vw;
+    width: 90vw;
+    max-height: 90vh;
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .editorial-section {
+    padding: 2.5rem 0 3rem 0;
+  }
+
+  .section-title {
+    font-size: clamp(1.85rem, 6vw, 2.6rem);
+    margin-bottom: 0.85rem;
+  }
+
+  .section-lead {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .experience-two-col-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .experience-card {
+    padding: 1.35rem 1.25rem;
+    border-radius: var(--radius-md);
+  }
+
+  .exp-role-title {
+    font-size: 1.15rem;
+  }
+
+  .timeline-list {
+    margin-left: 0.5rem;
+  }
+
+  .timeline-item {
+    padding-left: 1.5rem;
+    padding-bottom: 2.5rem;
+  }
+
+  .edu-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .edu-card {
+    padding: 1.35rem 1.25rem;
+    border-radius: var(--radius-md);
+  }
+
+  .edu-institution {
+    font-size: 1.25rem;
+  }
+
+  .featured-projects-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .project-card {
+    padding: 1.35rem 1.25rem;
+    border-radius: var(--radius-md);
+  }
+
+  .project-title {
+    font-size: 1.35rem;
+  }
+
+  .demo-tabs-nav {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .demo-tabs-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .demo-tab-btn {
+    padding: 0.75rem 1rem;
+    font-size: 0.78rem;
+  }
+
+  .galaxy-skill-bars-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .resume-modal-dialog {
+    max-width: 96vw;
+    width: 96vw;
+    max-height: 92vh;
+    padding: 1.25rem 1rem;
+    border-radius: 16px;
+  }
+
+  .project-modal-dialog {
+    max-width: 96vw;
+    width: 96vw;
+    max-height: 92vh;
+    padding: 1.25rem 1rem;
+  }
+
+  .footer-contact-card {
+    padding: 1.25rem 1.25rem;
+    border-radius: var(--radius-md);
+  }
+
+  .footer-email-trigger {
+    font-size: 1.15rem;
+    word-break: break-all;
+  }
+
+  .footer-cta-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .footer-cta-actions a,
+  .footer-cta-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .editorial-section {
+    padding: 2rem 0 2.5rem 0;
+  }
+
+  .section-title {
+    font-size: 1.65rem;
+  }
+
+  .section-label {
+    font-size: 0.72rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .hero-meta-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .hero-meta-right {
+    font-size: 0.75rem;
+  }
+
+  .hero-meta-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.65rem;
+  }
+
+  .hero-bio {
+    font-size: 0.96rem;
+    line-height: 1.55;
+  }
+
+  .project-tags {
+    gap: 0.35rem;
+  }
+
+  .project-tag {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.55rem;
+  }
+
+  .footer-hero-headline {
+    font-size: 1.65rem;
   }
 }

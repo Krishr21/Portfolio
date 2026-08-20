@@ -1124,3 +1124,233 @@
   transform: translateY(-2px);
 }
 
+/* ==========================================================================
+   RESPONSIVE DESIGN: TABLETS (<= 1024px) & MOBILE (<= 768px / <= 480px)
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .assistant-stage {
+    flex-direction: column-reverse !important;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1.5rem;
+    padding: 1.25rem 2rem 3.5rem 2rem;
+    max-width: 100%;
+  }
+
+  .assistant-content-col {
+    flex: 1 1 100%;
+    max-width: 720px;
+    width: 100%;
+    align-items: center;
+    text-align: center;
+  }
+
+  .assistant-bot-col {
+    flex: 0 0 auto;
+    min-width: auto;
+    width: 100%;
+    max-width: 360px;
+    height: 320px;
+    margin-bottom: 0.5rem;
+  }
+
+  .assistant-3d-wrapper {
+    width: 100%;
+    max-width: 340px;
+    height: 300px;
+    min-height: 260px;
+  }
+
+  .assistant-dialogue-box {
+    max-width: 100%;
+    padding: 1.4rem 1.8rem;
+    border-radius: 20px;
+    text-align: left;
+  }
+
+  .assistant-ai-chat-bar {
+    max-width: 100%;
+  }
+
+  .assistant-choices-container {
+    max-width: 100%;
+    justify-content: center;
+  }
+
+  .assistant-prompts-row {
+    max-width: 100%;
+    justify-content: center;
+  }
+
+  .live-voice-hud {
+    max-width: 100%;
+  }
+
+  .challenge-card,
+  .challenge-next-row,
+  .challenge-finish-actions {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .assistant-stage {
+    padding: 1rem 1.25rem 3rem 1.25rem;
+    gap: 1.25rem;
+  }
+
+  .assistant-bot-col {
+    max-width: 300px;
+    height: 260px;
+  }
+
+  .assistant-3d-wrapper {
+    max-width: 280px;
+    height: 250px;
+    min-height: 220px;
+  }
+
+  .assistant-emotes-bar {
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .assistant-emote-btn {
+    font-size: 0.72rem;
+    padding: 0.25rem 0.6rem;
+  }
+
+  .assistant-dialogue-box {
+    padding: 1.2rem 1.35rem;
+    border-radius: 18px;
+  }
+
+  .assistant-speech {
+    font-size: 1.02rem;
+    line-height: 1.58;
+  }
+
+  .assistant-ai-chat-bar {
+    padding: 0.4rem 0.5rem 0.4rem 1.1rem;
+    gap: 0.4rem;
+  }
+
+  .assistant-chat-input {
+    font-size: 0.9rem;
+  }
+
+  .assistant-mic-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  .assistant-send-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.84rem;
+  }
+
+  .assistant-choice-btn {
+    font-size: 0.85rem;
+    padding: 0.55rem 1rem;
+  }
+
+  .challenge-option-btn {
+    font-size: 0.88rem;
+    padding: 0.85rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .assistant-stage {
+    padding: 0.75rem 0.85rem 2.5rem 0.85rem;
+    gap: 1rem;
+  }
+
+  .assistant-bot-col {
+    max-width: 260px;
+    height: 220px;
+  }
+
+  .assistant-3d-wrapper {
+    max-width: 240px;
+    height: 210px;
+    min-height: 190px;
+  }
+
+  .assistant-dialogue-box {
+    padding: 1rem 1.15rem;
+    border-radius: 16px;
+    margin-bottom: 1rem;
+  }
+
+  .assistant-badge {
+    font-size: 0.68rem;
+    padding: 0.25rem 0.7rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .assistant-speech {
+    font-size: 0.96rem;
+    line-height: 1.55;
+  }
+
+  .assistant-choice-btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.82rem;
+    padding: 0.6rem 0.9rem;
+  }
+
+  .assistant-prompts-row {
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+  }
+
+  .assistant-prompt-pill {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.65rem;
+  }
+
+  .assistant-ai-chat-bar {
+    border-radius: var(--radius-lg);
+    padding: 0.35rem 0.45rem 0.35rem 0.85rem;
+  }
+
+  .assistant-chat-input {
+    font-size: 0.85rem;
+  }
+
+  .assistant-send-btn {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.8rem;
+  }
+
+  .assistant-mic-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 0.85rem;
+  }
+
+  .live-voice-hud {
+    padding: 0.5rem 0.85rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .live-voice-status {
+    font-size: 0.78rem;
+  }
+
+  .challenge-finish-actions {
+    flex-direction: column;
+  }
+
+  .challenge-cta-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
