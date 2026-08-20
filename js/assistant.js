@@ -272,21 +272,24 @@ class ConversationalAssistant {
     const apiBase = window.PORTFOLIO_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8080' : 'https://krish-portfolio-backend.onrender.com');
 
     const keyPhrases = [
-      "I am K.R.I.S.H., Krish's Responsive Intelligent Software Host.",
-      "Krish Ruparel is an AI Engineer and Distributed Systems Architect pursuing his Master of Science in Computer Science at UT Arlington with a three point eight four GPA.",
-      "Here is why you should hire Krish: First, proven production impact with a thirty percent event throughput boost using Solace pub/sub.",
-      "VisionVault is Krish's multimodal video RAG pipeline.",
-      "OrchestrAI is Krish's agent observability platform built with FastAPI, Postgres, Redis Pub/Sub, and WebSockets.",
-      "CarWise-AI uses Google Gemini's native Search Grounding to eliminate hallucinations and stream verified real-time car listings with pros and cons.",
+      "Hello there! Wonderful to meet you! What would you like to explore about Krish's background today?",
+      "Starting Technical Interview Challenge! Let's test your knowledge across Krish's core engineering domains.",
       "Krish co-authored a peer-reviewed IEEE research paper benchmarking YOLOv8 for food recognition and 3D volume estimation.",
       "He created a custom one thousand image benchmark with eighty-two percent recognition accuracy.",
-      "Krish worked as an Automation and Integration Consultant at Utrecht IT Consulting in the Netherlands, boosting event throughput by thirty percent using Solace pub/sub.",
-      "Krish holds a three point eight four GPA in his Master of Science in Computer Science at the University of Texas at Arlington.",
-      "Krish's core technical stack centers around Python, PyTorch, FastAPI, Qdrant, FAISS, Docker, Redis, and Solace messaging.",
-      "Krish is actively interviewing for Fall 2026 and Spring 2027 AI Engineer, Machine Learning, and Distributed Systems roles.",
-      "You can reach Krish directly via email at krishruparel.career@gmail.com, or by phone at (682)-392-0214.",
-      "Krish is located in Arlington, Texas, and is fully open to relocate anywhere in the United States.",
-      "Hello there! Wonderful to meet you! What would you like to explore about Krish's background today?"
+      "VisionVault is Krish's multimodal video RAG pipeline.",
+      "It transcribes audio using Whisper and captions frames, indexing time-aligned vectors in Qdrant and FAISS with cross-encoder reranking for sub-second conversational video search.",
+      "OrchestrAI is Krish's agent observability platform built with FastAPI, Postgres, Redis Pub/Sub, and WebSockets.",
+      "It records agent execution steps with sub-ten millisecond latency and enables deterministic replay.",
+      "CarWise-AI uses Google Gemini's native Search Grounding to eliminate hallucinations and stream verified real-time car listings with pros and cons.",
+      "Krish holds a three point eight four GPA in his Master of Science in Computer Science at the University of Texas at Arlington, specializing in Advanced Algorithms, Artificial Intelligence, and Computer Vision.",
+      "Krish worked as an Automation and Integration Consultant at Utrecht IT Consulting in the Netherlands, boosting event throughput by thirty percent using Solace pub/sub, and as an AI intern at Micropro Solutions building multimodal RAG with Qdrant.",
+      "Krish's core technical stack spans Python, FastAPI, PyTorch, Qdrant, Docker, Redis Pub/Sub, PostgreSQL, and distributed streaming with Solace and Celery.",
+      "Here is why you should hire Krish: First, proven production impact with a thirty percent event throughput boost using Solace pub/sub.",
+      "Krish is actively open and available for Fall 2026 and Spring 2027 roles across AI engineering, machine learning, and distributed systems, and is ready to interview immediately.",
+      "You can reach Krish directly by email at krishruparel.career@gmail.com, or by phone at (682)-392-0214.",
+      "Krish is currently based in Arlington, Texas in the Dallas Fort Worth area, and is fully open to relocate across the United States for on-site, hybrid, or remote roles.",
+      "Krish Ruparel is an AI Engineer and Distributed Systems Architect pursuing his Master of Science in Computer Science at UT Arlington with a three point eight four GPA.",
+      "I am K.R.I.S.H., Krish's Responsive Intelligent Software Host."
     ];
 
     let idx = 0;
@@ -902,44 +905,33 @@ class ConversationalAssistant {
     // Helper: Checks if query contains any of the words/phrases
     const has = (...keywords) => keywords.some(k => q.includes(k));
 
-    // 1. IDENTITY & PERSONA ("Who are you", "What is KRISH", "What can you do")
-    if (has('who are you', 'what are you', 'your name', 'introduce yourself', 'what is k.r.i.s.h', 'what is krish host', 'are you a bot', 'are you real', 'who made you', 'who built you', 'what can you do', 'help', 'capabilities')) {
-      gesture = 'wave';
-      answerHtml = `🤖 <strong>I am K.R.I.S.H.</strong> — Krish's <em>Responsive Intelligent Software Host</em>!<br><br>I'm an interactive 3D AI assistant built to guide you through Krish's engineering portfolio. You can ask me anything about his <strong>multimodal RAG systems, 3.84 MS CS GPA at UT Arlington, Solace event streaming experience, published IEEE research</strong>, or ask me to perform robot gestures (wave, salute, cheer)!`;
-      plainSpeech = `I am K.R.I.S.H., Krish's Responsive Intelligent Software Host. I'm an interactive 3D AI assistant built to guide you through Krish's portfolio. You can ask me anything about his multimodal RAG systems, his MS CS GPA at UT Arlington, his Solace streaming experience, or his IEEE research.`;
-      followUpChoices = [
-        { label: "⚡ Explore Featured Projects", target: "projects-intro", primary: true },
-        { label: "💼 Why Hire Krish?", target: "hire-intro" },
-        { label: "📜 View Full Resume", action: "open-resume-modal" }
-      ];
-    }
-
-    // 2. ABOUT KRISH ("Who is Krish", "Tell me about yourself", "Background", "Bio")
-    else if (has('who is krish', 'tell me about krish', 'about krish', 'bio', 'background', 'overview', 'summary', 'about yourself', 'tell me about yourself', 'introduction')) {
-      gesture = 'salute';
-      answerHtml = `👨‍💻 <strong>Krish Ruparel</strong> is an <strong>AI Engineer &amp; Distributed Systems Architect</strong> pursuing his Master of Science in Computer Science at <strong>UT Arlington (3.84 GPA)</strong>.<br><br>He has deployed production multimodal RAG pipelines over Qdrant &amp; FAISS, boosted event throughput by <strong>+30% using Solace pub/sub</strong> at Utrecht IT Consulting, and co-authored a published <strong>IEEE research paper</strong> on YOLOv8 computer vision.`;
-      plainSpeech = `Krish Ruparel is an AI Engineer and Distributed Systems Architect pursuing his Master of Science in Computer Science at UT Arlington with a three point eight four GPA. He specializes in multimodal RAG pipelines, agent observability, and distributed systems.`;
-      followUpChoices = [
-        { label: "⚡ View Featured Projects", target: "projects-intro", primary: true },
-        { label: "💼 Inquire to Hire Krish", target: "hire-intro" },
-        { label: "📄 Open Full Resume", action: "open-resume-modal" }
-      ];
-    }
-
-    // 3. WHY HIRE KRISH / STRENGTHS ("Why should we hire you", "Strengths", "Standout")
-    else if (has('why hire', 'why should i hire', 'why should we hire', 'strengths', 'unique', 'standout', 'greatest achievement', 'value', 'why you', 'why him')) {
+    // 1. TECHNICAL CHALLENGE / QUIZ / TEST
+    if (has('quiz', 'challenge', 'technical challenge', 'take quiz', 'test krish', 'test knowledge', 'take technical')) {
       gesture = 'cheer';
-      answerHtml = `🌟 <strong>Top 3 Reasons to Hire Krish Ruparel</strong>:<br><br>1. 🚀 <strong>Proven Production Impact</strong>: Engineered custom Solace pub/sub connectors boosting event throughput by 30% at Utrecht IT Consulting.<br>2. 🧠 <strong>Deep Multimodal AI &amp; Systems Rigor</strong>: Built VisionVault (video RAG) and OrchestrAI (agent tracing with sub-10ms latency).<br>3. 📚 <strong>Academic &amp; Research Excellence</strong>: 3.84 MS CS GPA at UT Arlington and published IEEE computer vision research.`;
-      plainSpeech = `Here is why you should hire Krish: First, proven production impact with a thirty percent event throughput boost using Solace pub/sub. Second, deep hands-on expertise building multimodal RAG and agent observability systems. And third, academic excellence with a three point eight four MS CS GPA and published IEEE research.`;
+      answerHtml = `🎯 <strong>Starting Technical Interview Challenge!</strong><br><br>Let's test your knowledge across Krish's core engineering domains: Multimodal RAG, Distributed Systems, YOLOv8 Vision, and Event Streaming!`;
+      plainSpeech = `Starting Technical Interview Challenge! Let's test your knowledge across Krish's core engineering domains.`;
       followUpChoices = [
-        { label: "💼 Start Hiring Conversation", target: "hire-intro", primary: true },
-        { label: "⚡ Explore Featured Projects", target: "projects-intro" },
-        { label: "📋 Copy Krish's Email", action: "copy-email" }
+        { label: "🚀 Start 4-Question Challenge", action: "start-challenge", primary: true },
+        { label: "⚡ Explore Featured Projects", target: "projects-intro" }
+      ];
+      if (window.challengeEngine) {
+        setTimeout(() => window.challengeEngine.startChallenge(), 600);
+      }
+    }
+
+    // 2. IEEE RESEARCH PAPER / YOLOV8 / COMPUTER VISION
+    else if (has('ieee', 'paper', 'yolo', 'yolov8', 'food', 'volume', '3d volume', 'publication', 'journal')) {
+      gesture = 'salute';
+      answerHtml = `📑 <strong>IEEE Research Publication</strong>:<br><em>"Reviewing Advances in Food Image Recognition and Nutritional Assessment: Focus on YOLOv8"</em><br><br>• Co-authored a peer-reviewed research paper benchmarked in an <strong>IEEE Journal</strong>.<br>• Built a custom 1,000-image Indian Food dataset achieving <strong>82% recognition accuracy</strong>.<br>• Analyzed 3D volume estimation using stereo vision and Structure from Motion (SfM).`;
+      plainSpeech = `Krish co-authored a peer-reviewed IEEE research paper benchmarking YOLOv8 for food recognition and 3D volume estimation. He created a custom one thousand image benchmark with eighty-two percent recognition accuracy.`;
+      followUpChoices = [
+        { label: "💼 Discuss Research with Krish", target: "hire-intro", primary: true },
+        { label: "📜 Open Full Resume", action: "open-resume-modal" }
       ];
     }
 
-    // 4. VISIONVAULT / MULTIMODAL VIDEO RAG
-    else if (has('visionvault', 'video rag', 'multimodal rag', 'video search', 'whisper', 'frame captioning', 'qdrant', 'cross-encoder')) {
+    // 3. VISIONVAULT / MULTIMODAL VIDEO RAG
+    else if (has('rag', 'visionvault', 'video rag', 'multimodal rag', 'video search', 'whisper', 'frame captioning', 'qdrant', 'cross-encoder')) {
       gesture = 'salute';
       answerHtml = `🎥 <strong>VisionVault</strong> is Krish's multimodal video RAG pipeline &amp; semantic search engine!<br><br>• Transcribes video audio using <strong>Whisper</strong> and captions keyframes.<br>• Aligns multimodal cues into searchable vector chunks indexed in <strong>Qdrant &amp; FAISS</strong>.<br>• Applies <strong>cross-encoder reranking</strong> to achieve sub-second retrieval precision for conversational video QA.`;
       plainSpeech = `VisionVault is Krish's multimodal video RAG pipeline. It transcribes audio using Whisper and captions frames, indexing time-aligned vectors in Qdrant and FAISS with cross-encoder reranking for sub-second conversational video search.`;
@@ -950,7 +942,7 @@ class ConversationalAssistant {
       ];
     }
 
-    // 5. ORCHESTRAI / AGENT OBSERVABILITY & DETERMINISTIC REPLAY
+    // 4. ORCHESTRAI / AGENT OBSERVABILITY & DETERMINISTIC REPLAY
     else if (has('orchestrai', 'observability', 'replay', 'deterministic', 'agent trace', 'tracing', 'telemetry', 'redis pub', 'opentelemetry')) {
       gesture = 'salute';
       answerHtml = `⚡ <strong>OrchestrAI</strong> is an agent observability platform Krish built using <strong>FastAPI, Postgres, Redis Pub/Sub, WebSockets, and Celery</strong>.<br><br>• Streams live AI agent runs with <strong>sub-10ms latency</strong>.<br>• Enables <strong>100% deterministic offline replay</strong> and regression evaluation.<br>• Fully instrumented with OpenTelemetry and containerized via Docker Compose.`;
@@ -962,7 +954,7 @@ class ConversationalAssistant {
       ];
     }
 
-    // 6. CARWISE-AI / GEMINI SEARCH GROUNDING
+    // 5. CARWISE-AI / GEMINI SEARCH GROUNDING
     else if (has('carwise', 'car', 'gemini', 'grounding', 'search grounding', 'hallucination', 'pros and cons')) {
       gesture = 'salute';
       answerHtml = `🚗 <strong>CarWise-AI</strong> is an automotive discovery assistant powered by <strong>Google Gemini API with native Search Grounding</strong>.<br><br>• Fetches real-time, verified vehicle marketplace listings directly from live web sources to eliminate hallucinations.<br>• Auto-generates AI pros, cons, and side-by-side spec comparison matrices.`;
@@ -973,19 +965,19 @@ class ConversationalAssistant {
       ];
     }
 
-    // 7. IEEE RESEARCH PAPER / YOLOV8 / COMPUTER VISION
-    else if (has('ieee', 'paper', 'research', 'yolo', 'yolov8', 'food', 'volume', '3d volume', 'publication', 'journal')) {
+    // 6. EDUCATION, GPA & UNIVERSITY
+    else if (has('gpa', 'education', 'university', 'college', 'uta', 'arlington', 'pune', 'degree', 'masters', 'bachelors', 'academics', 'grades', 'coursework')) {
       gesture = 'salute';
-      answerHtml = `📑 <strong>IEEE Research Publication</strong>:<br><em>"Reviewing Advances in Food Image Recognition and Nutritional Assessment: Focus on YOLOv8"</em><br><br>• Co-authored a peer-reviewed research paper benchmarked in an <strong>IEEE Journal</strong>.<br>• Built a custom 1,000-image Indian Food dataset achieving <strong>82% recognition accuracy</strong>.<br>• Analyzed 3D volume estimation using stereo vision and Structure from Motion (SfM).`;
-      plainSpeech = `Krish co-authored a peer-reviewed IEEE research paper benchmarking YOLOv8 for food recognition and 3D volume estimation. He created a custom one thousand image benchmark with eighty-two percent recognition accuracy.`;
+      answerHtml = `🎓 <strong>Academic Credentials</strong>:<br><br>• 🇺🇸 <strong>University of Texas at Arlington</strong>: Master of Science in Computer Science (GPA: <strong>3.84 / 4.0</strong>, Aug 2025 – May 2027)<br><em>Coursework:</em> Advanced Algorithms, Data Mining, Artificial Intelligence, Computer Vision.<br><br>• 🇮🇳 <strong>University of Pune</strong>: Bachelor of Engineering in Computer Engineering (GPA: <strong>3.4 / 4.0</strong>, 2021 – 2025)`;
+      plainSpeech = `Krish holds a three point eight four GPA in his Master of Science in Computer Science at the University of Texas at Arlington, specializing in Advanced Algorithms, Artificial Intelligence, and Computer Vision.`;
       followUpChoices = [
-        { label: "💼 Discuss Research with Krish", target: "hire-intro", primary: true },
-        { label: "📜 Open Full Resume", action: "open-resume-modal" }
+        { label: "📄 Open Full Resume", action: "open-resume-modal", primary: true },
+        { label: "💼 Hire Krish", target: "hire-intro" }
       ];
     }
 
-    // 8. WORK EXPERIENCE (UTRECHT IT CONSULTING & MICROPRO SOLUTIONS)
-    else if (has('experience', 'work', 'job history', 'career', 'utrecht', 'netherlands', 'micropro', 'solace', 'workato', 'internship')) {
+    // 7. WORK EXPERIENCE (UTRECHT IT CONSULTING & MICROPRO SOLUTIONS)
+    else if (has('solace', 'throughput', 'utrecht', 'netherlands', 'micropro', 'workato', 'work history', 'job history', 'past experience', 'internship', 'boost', 'work')) {
       gesture = 'salute';
       answerHtml = `💼 <strong>Professional Work Experience</strong>:<br><br>• 🇳🇱 <strong>Utrecht IT Consulting (Netherlands)</strong>: Automation &amp; Integration Consultant (2024–2025). Engineered Solace pub/sub SDK connectors (+30% throughput), built Workato AI agents, and deployed 3 mission-critical pipelines.<br>• 🇮🇳 <strong>Micropro Solutions (India)</strong>: AI Engineering Intern (2024). Deployed multimodal video RAG with Qdrant/FAISS, cross-encoders, and OpenTelemetry.`;
       plainSpeech = `Krish worked as an Automation and Integration Consultant at Utrecht IT Consulting in the Netherlands, boosting event throughput by thirty percent using Solace pub/sub, and as an AI intern at Micropro Solutions building multimodal RAG with Qdrant.`;
@@ -995,30 +987,31 @@ class ConversationalAssistant {
       ];
     }
 
-    // 9. EDUCATION, GPA & UNIVERSITY
-    else if (has('gpa', 'education', 'university', 'college', 'uta', 'arlington', 'pune', 'degree', 'masters', 'bachelors', 'academics', 'grades', 'coursework')) {
+    // 8. SPECIFIC TECH INQUIRIES (Python, PyTorch, Docker, Redis, C++, SQL, React, etc.)
+    else if (has('python', 'pytorch', 'docker', 'redis', 'fastapi', 'c++', 'sql', 'spark', 'aws', 'gcp', 'celery', 'mongodb', 'postgres', 'langchain', 'llamaindex', 'tech stack', 'skill', 'tools', 'languages', 'frameworks', 'programming')) {
       gesture = 'salute';
-      answerHtml = `🎓 <strong>Academic Credentials</strong>:<br><br>• 🇺🇸 <strong>University of Texas at Arlington</strong>: Master of Science in Computer Science (GPA: <strong>3.84 / 4.0</strong>, Aug 2025 – May 2027)<br><em>Coursework:</em> Advanced Algorithms, Data Mining, Artificial Intelligence, Computer Vision.<br><br>• 🇮🇳 <strong>University of Pune</strong>: Bachelor of Engineering in Computer Engineering (GPA: <strong>3.4 / 4.0</strong>, 2021 – 2025)`;
-      plainSpeech = `Krish is pursuing his Master of Science in Computer Science at UT Arlington with a three point eight four GPA, and earned his Bachelor's in Computer Engineering from University of Pune with a three point four GPA.`;
+      answerHtml = `🛠 <strong>Technical Skills Matrix</strong>:<br><br>• <strong>Languages:</strong> Python, C++, JavaScript (ES6+), SQL, Java, R<br>• <strong>AI &amp; ML:</strong> Multimodal RAG, Qdrant, FAISS, PyTorch, LlamaIndex, LangChain, YOLOv8, OpenCV<br>• <strong>Backend &amp; Cloud:</strong> FastAPI, Docker, Redis Pub/Sub, WebSockets, Celery, AWS, GCP, Solace<br>• <strong>Databases:</strong> PostgreSQL, MongoDB, DynamoDB, Apache Spark`;
+      plainSpeech = `Krish's core technical stack spans Python, FastAPI, PyTorch, Qdrant, Docker, Redis Pub/Sub, PostgreSQL, and distributed streaming with Solace and Celery.`;
       followUpChoices = [
-        { label: "📄 Open Full Resume", action: "open-resume-modal", primary: true },
-        { label: "💼 Hire Krish", target: "hire-intro" }
+        { label: "⚡ Explore Projects", target: "projects-intro", primary: true },
+        { label: "📜 View Skills in Showcase", action: "switch-to-showcase" }
       ];
     }
 
-    // 10. LOCATION & RELOCATION ("Where are you located", "Where does Krish live", "Relocate")
-    else if (has('location', 'where is krish', 'where are you', 'where do you live', 'relocate', 'relocation', 'dallas', 'texas', 'remote', 'hybrid', 'on-site', 'city')) {
-      gesture = 'salute';
-      answerHtml = `📍 <strong>Location &amp; Mobility</strong>:<br><br>Krish is currently based in <strong>Arlington, Texas (Dallas–Fort Worth area)</strong>.<br><br>✈️ He is <strong>100% open to relocate anywhere across the United States</strong> for on-site, hybrid, or remote positions!`;
-      plainSpeech = `Krish is currently based in Arlington, Texas in the Dallas Fort Worth area, and is fully open to relocate across the United States for on-site, hybrid, or remote roles.`;
+    // 9. WHY HIRE KRISH / STRENGTHS ("Why should we hire you", "Strengths", "Standout")
+    else if (has('why hire', 'why should i hire', 'why should we hire', 'strengths', 'unique', 'standout', 'greatest achievement', 'value', 'why you', 'why him')) {
+      gesture = 'cheer';
+      answerHtml = `🌟 <strong>Top 3 Reasons to Hire Krish Ruparel</strong>:<br><br>1. 🚀 <strong>Proven Production Impact</strong>: Engineered custom Solace pub/sub connectors boosting event throughput by 30% at Utrecht IT Consulting.<br>2. 🧠 <strong>Deep Multimodal AI &amp; Systems Rigor</strong>: Built VisionVault (video RAG) and OrchestrAI (agent tracing with sub-10ms latency).<br>3. 📚 <strong>Academic &amp; Research Excellence</strong>: 3.84 MS CS GPA at UT Arlington and published IEEE computer vision research.`;
+      plainSpeech = `Here is why you should hire Krish: First, proven production impact with a thirty percent event throughput boost using Solace pub/sub. Second, deep hands-on expertise building multimodal RAG and agent observability systems. And third, academic excellence with a three point eight four MS CS GPA and published IEEE research.`;
       followUpChoices = [
-        { label: "💼 Discuss Roles with Krish", target: "hire-intro", primary: true },
+        { label: "💼 Start Hiring Conversation", target: "hire-intro", primary: true },
+        { label: "⚡ Explore Featured Projects", target: "projects-intro" },
         { label: "📋 Copy Krish's Email", action: "copy-email" }
       ];
     }
 
-    // 11. HIRING, ROLES & AVAILABILITY ("Are you available", "Visa status", "Internship")
-    else if (has('hire', 'available', 'availability', 'fall 2026', 'spring 2027', 'roles', 'open to', 'visa', 'sponsorship', 'interview', 'start date', 'full time', 'intern', 'coop', 'co-op')) {
+    // 10. HIRING, ROLES & AVAILABILITY ("Are you available", "Visa status", "Internship")
+    else if (has('hire', 'available', 'availability', 'fall 2026', 'spring 2027', 'open to', 'visa', 'sponsorship', 'interview', 'start date', 'full time', 'intern', 'coop', 'co-op')) {
       gesture = 'cheer';
       answerHtml = `🚀 <strong>Hiring &amp; Availability Status</strong>:<br><br>Krish is <strong>actively interviewing for Fall 2026 and Spring 2027 roles</strong>!<br><br>• <strong>Target Roles:</strong> AI Engineer, Machine Learning Engineer, Backend / Distributed Systems Engineer, Full-Stack AI Engineer.<br>• <strong>Location:</strong> Open to On-site (US Relocation), Hybrid, or Remote.<br>• <strong>Ready to interview immediately!</strong>`;
       plainSpeech = `Krish is actively open and available for Fall 2026 and Spring 2027 roles across AI engineering, machine learning, and distributed systems, and is ready to interview immediately.`;
@@ -1026,6 +1019,17 @@ class ConversationalAssistant {
         { label: "💼 Submit Hiring Inquiry", target: "hire-intro", primary: true },
         { label: "📋 Copy Email", action: "copy-email" },
         { label: "📜 View Full Resume", action: "open-resume-modal" }
+      ];
+    }
+
+    // 11. LOCATION & RELOCATION ("Where are you located", "Where does Krish live", "Relocate")
+    else if (has('location', 'where is krish', 'where are you', 'where do you live', 'relocate', 'relocation', 'dallas', 'texas', 'remote', 'hybrid', 'on-site', 'city')) {
+      gesture = 'salute';
+      answerHtml = `📍 <strong>Location &amp; Mobility</strong>:<br><br>Krish is currently based in <strong>Arlington, Texas (Dallas–Fort Worth area)</strong>.<br><br>✈️ He is <strong>100% open to relocate anywhere across the United States</strong> for on-site, hybrid, or remote positions!`;
+      plainSpeech = `Krish is currently based in Arlington, Texas in the Dallas Fort Worth area, and is fully open to relocate across the United States for on-site, hybrid, or remote roles.`;
+      followUpChoices = [
+        { label: "💼 Discuss Roles with Krish", target: "hire-intro", primary: true },
+        { label: "📋 Copy Krish's Email", action: "copy-email" }
       ];
     }
 
@@ -1041,35 +1045,27 @@ class ConversationalAssistant {
       ];
     }
 
-    // 13. FULL TECH STACK & SKILLS
-    else if (has('skill', 'tech stack', 'technology', 'tools', 'languages', 'frameworks', 'programming', 'stack')) {
+    // 13. ABOUT KRISH ("Who is Krish", "Tell me about yourself", "Background", "Bio")
+    else if (has('who is krish', 'tell me about krish', 'about krish', 'bio', 'background', 'overview', 'summary', 'about yourself', 'tell me about yourself', 'introduction')) {
       gesture = 'salute';
-      answerHtml = `🛠 <strong>Technical Skills Matrix</strong>:<br><br>• <strong>Languages:</strong> Python, C++, JavaScript (ES6+), SQL, Java, R<br>• <strong>AI &amp; ML:</strong> Multimodal RAG, Qdrant, FAISS, PyTorch, LlamaIndex, LangChain, YOLOv8, OpenCV<br>• <strong>Backend &amp; Cloud:</strong> FastAPI, Docker, Redis Pub/Sub, WebSockets, Celery, AWS, GCP, Solace<br>• <strong>Databases:</strong> PostgreSQL, MongoDB, DynamoDB, Apache Spark`;
-      plainSpeech = `Krish's core technical stack spans Python, FastAPI, PyTorch, Qdrant, Docker, Redis Pub/Sub, PostgreSQL, and distributed streaming with Solace and Celery.`;
+      answerHtml = `👨‍💻 <strong>Krish Ruparel</strong> is an <strong>AI Engineer &amp; Distributed Systems Architect</strong> pursuing his Master of Science in Computer Science at <strong>UT Arlington (3.84 GPA)</strong>.<br><br>He has deployed production multimodal RAG pipelines over Qdrant &amp; FAISS, boosted event throughput by <strong>+30% using Solace pub/sub</strong> at Utrecht IT Consulting, and co-authored a published <strong>IEEE research paper</strong> on YOLOv8 computer vision.`;
+      plainSpeech = `Krish Ruparel is an AI Engineer and Distributed Systems Architect pursuing his Master of Science in Computer Science at UT Arlington with a three point eight four GPA. He specializes in multimodal RAG pipelines, agent observability, and distributed systems.`;
       followUpChoices = [
-        { label: "⚡ Explore Projects", target: "projects-intro", primary: true },
-        { label: "📜 View Skills in Showcase", action: "switch-to-showcase" }
+        { label: "⚡ View Featured Projects", target: "projects-intro", primary: true },
+        { label: "💼 Inquire to Hire Krish", target: "hire-intro" },
+        { label: "📄 Open Full Resume", action: "open-resume-modal" }
       ];
     }
 
-    // 14. SPECIFIC TECH INQUIRIES (Python, PyTorch, Docker, Redis, C++, SQL, React, etc.)
-    else if (has('python', 'pytorch', 'docker', 'redis', 'fastapi', 'c++', 'sql', 'spark', 'aws', 'gcp', 'celery', 'solace', 'mongodb', 'postgres', 'langchain', 'llamaindex')) {
-      gesture = 'salute';
-      let matchingSkills = [];
-      if (has('python')) matchingSkills.push("<strong>Python</strong>: Krish's primary production language for FastAPI backends, asynchronous RAG pipelines, and PyTorch models.");
-      if (has('pytorch')) matchingSkills.push("<strong>PyTorch</strong>: Used for deep learning model training, computer vision embeddings, and YOLOv8 fine-tuning.");
-      if (has('docker')) matchingSkills.push("<strong>Docker &amp; Compose</strong>: Production containerization across VisionVault and OrchestrAI with multi-stage builds.");
-      if (has('redis')) matchingSkills.push("<strong>Redis Pub/Sub</strong>: High-throughput real-time message brokering and live WebSocket streaming in OrchestrAI.");
-      if (has('fastapi')) matchingSkills.push("<strong>FastAPI</strong>: High-performance asynchronous REST and WebSocket API architecture.");
-      if (has('c++')) matchingSkills.push("<strong>C++</strong>: High-efficiency algorithmic systems, data structures, and computer vision preprocessing.");
-      if (has('sql', 'postgres')) matchingSkills.push("<strong>PostgreSQL &amp; SQL</strong>: Relational schema design, index optimization, and Alembic database migrations.");
-      if (has('solace')) matchingSkills.push("<strong>Solace Messaging</strong>: Engineered custom pub/sub SDK connectors boosting throughput by +30% at Utrecht IT Consulting.");
-
-      answerHtml = `💡 <strong>Krish's Hands-on Technology Experience</strong>:<br><br>` + matchingSkills.join('<br><br>');
-      plainSpeech = `Yes! Krish has extensive production experience with those technologies across his projects and work at Utrecht IT Consulting and Micropro Solutions.`;
+    // 14. IDENTITY & PERSONA ("Who are you", "What is KRISH", "What can you do")
+    else if (has('who are you', 'what are you', 'your name', 'introduce yourself', 'what is k.r.i.s.h', 'what is krish host', 'are you a bot', 'are you real', 'who made you', 'who built you', 'what can you do', 'help', 'capabilities')) {
+      gesture = 'wave';
+      answerHtml = `🤖 <strong>I am K.R.I.S.H.</strong> — Krish's <em>Responsive Intelligent Software Host</em>!<br><br>I'm an interactive 3D AI assistant built to guide you through Krish's engineering portfolio. You can ask me anything about his <strong>multimodal RAG systems, 3.84 MS CS GPA at UT Arlington, Solace event streaming experience, published IEEE research</strong>, or ask me to perform robot gestures (wave, salute, cheer)!`;
+      plainSpeech = `I am K.R.I.S.H., Krish's Responsive Intelligent Software Host. I'm an interactive 3D AI assistant built to guide you through Krish's portfolio. You can ask me anything about his multimodal RAG systems, his MS CS GPA at UT Arlington, his Solace streaming experience, or his IEEE research.`;
       followUpChoices = [
-        { label: "⚡ Explore Projects", target: "projects-intro", primary: true },
-        { label: "📜 Open Full Resume", action: "open-resume-modal" }
+        { label: "⚡ Explore Featured Projects", target: "projects-intro", primary: true },
+        { label: "💼 Why Hire Krish?", target: "hire-intro" },
+        { label: "📜 View Full Resume", action: "open-resume-modal" }
       ];
     }
 
